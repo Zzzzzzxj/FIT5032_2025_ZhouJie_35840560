@@ -56,7 +56,7 @@
         Company:
         <!-- Activity 9a: Get the company name from the bookstores object. -->
         <!-- TODO: CODE TO GET COMPANY NAME HERE -->
-        {{ bookstores.company }}
+        {{ bookstores.name }}
       </p>
 
       <p>
@@ -125,7 +125,6 @@
 import { ref, computed } from "vue"
 
 // Activity 1: Import JSON files (authors.json and bookstores.json)
-// TODO: CODE TO IMPORT JSON FILES HERE
 import authors from "../assets/json/authors.json" 
 import bookstores from "../assets/json/bookstores.json"
 
