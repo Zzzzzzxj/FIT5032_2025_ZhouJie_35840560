@@ -1,6 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue';
+import Navbar from '../components/Navbar.vue'
+import { ref, computed, onMounted } from 'vue';
 import { store } from '../store.js';
+
+const emit = defineEmits(['signup', 'login'])
+
+onMounted(() => {
+  if (!store.isLoggedIn) {
+    store.navigate('login')
+  }
+})
 
 // Local state for the form
 const newMoodEntry = ref({
@@ -63,86 +72,89 @@ function addMoodEntry() {
 </script>
 
 <template>
-  <div class="container" style="margin-top: 100px;">
-    <div class="row">
-      <div class="col-lg-8 mb-4">
-        <div class="card">
-          <div class="card-header">
-            <h4><i class="fas fa-chart-line me-2"></i>Today's Mood Entry</h4>
+  <div class="mood-root">
+    <Navbar @signup="emit('signup')" @login="emit('login')" />
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 mb-4">
+          <div class="card">
+            <div class="card-header">
+              <h4><i class="fas fa-chart-line me-2"></i>Today's Mood Entry</h4>
+            </div>
+            <div class="card-body">
+              <form @submit.prevent="addMoodEntry">
+                <div class="mb-4">
+                  <label class="form-label fw-bold">How are you feeling today? (1-10)</label>
+                  <input type="range" class="mood-slider" v-model.number="newMoodEntry.mood" min="1" max="10" />
+                  <div class="d-flex justify-content-between mt-2">
+                    <small class="text-muted">Very Down</small>
+                    <span class="text-primary fw-bold fs-5">{{ newMoodEntry.mood }}</span>
+                    <small class="text-muted">Very Good</small>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">Notes for today (optional)</label>
+                  <textarea
+                    class="form-control"
+                    v-model="newMoodEntry.notes"
+                    rows="3"
+                    placeholder="Describe what happened or how you feel..."
+                  ></textarea>
+                  <div class="form-text" :class="{ 'text-danger': !isValidMoodEntry }">
+                    {{ newMoodEntry.notes.length }}/500 characters
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary" :disabled="!isValidMoodEntry">
+                  <i class="fas fa-save me-2"></i>Save Entry
+                </button>
+              </form>
+            </div>
           </div>
-          <div class="card-body">
-            <form @submit.prevent="addMoodEntry">
-              <div class="mb-4">
-                <label class="form-label fw-bold">How are you feeling today? (1-10)</label>
-                <input type="range" class="mood-slider" v-model.number="newMoodEntry.mood" min="1" max="10" />
-                <div class="d-flex justify-content-between mt-2">
-                  <small class="text-muted">Very Down</small>
-                  <span class="text-primary fw-bold fs-5">{{ newMoodEntry.mood }}</span>
-                  <small class="text-muted">Very Good</small>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="fas fa-chart-bar me-2"></i>7-Day Mood Trend</h5>
+            </div>
+            <div class="card-body">
+              <div class="mood-chart">
+                <div v-for="(entry, index) in recentMoodEntries" :key="index"
+                     class="mood-bar"
+                     :style="{ height: entry.mood * 25 + 'px' }"
+                     :title="`${entry.date}: ${entry.mood}/10`">
                 </div>
               </div>
-              <div class="mb-3">
-                <label class="form-label fw-bold">Notes for today (optional)</label>
-                <textarea
-                  class="form-control"
-                  v-model="newMoodEntry.notes"
-                  rows="3"
-                  placeholder="Describe what happened or how you feel..."
-                ></textarea>
-                <div class="form-text" :class="{ 'text-danger': !isValidMoodEntry }">
-                  {{ newMoodEntry.notes.length }}/500 characters
-                </div>
+              <div class="mt-3 text-center">
+                <small class="text-muted">7-Day Average: {{ averageMood.toFixed(1) }}/10</small>
               </div>
-              <button type="submit" class="btn btn-primary" :disabled="!isValidMoodEntry">
-                <i class="fas fa-save me-2"></i>Save Entry
-              </button>
-            </form>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="col-lg-4 mb-4">
-        <div class="card">
-          <div class="card-header">
-            <h5><i class="fas fa-chart-bar me-2"></i>7-Day Mood Trend</h5>
-          </div>
-          <div class="card-body">
-            <div class="mood-chart">
-              <div v-for="(entry, index) in recentMoodEntries" :key="index"
-                   class="mood-bar"
-                   :style="{ height: entry.mood * 25 + 'px' }"
-                   :title="`${entry.date}: ${entry.mood}/10`">
+      <div class="row mt-2">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between">
+              <h5><i class="fas fa-history me-2"></i>Mood History</h5>
+              <small class="text-muted">{{ userMoodEntries.length }} entries total</small>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+              <div v-if="userMoodEntries.length === 0" class="text-center text-muted py-4">
+                <p>No mood entries yet. Start by adding one today!</p>
               </div>
-            </div>
-            <div class="mt-3 text-center">
-              <small class="text-muted">7-Day Average: {{ averageMood.toFixed(1) }}/10</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row mt-2">
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between">
-            <h5><i class="fas fa-history me-2"></i>Mood History</h5>
-            <small class="text-muted">{{ userMoodEntries.length }} entries total</small>
-          </div>
-          <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-            <div v-if="userMoodEntries.length === 0" class="text-center text-muted py-4">
-              <p>No mood entries yet. Start by adding one today!</p>
-            </div>
-            <div v-else>
-              <div v-for="entry in [...userMoodEntries].reverse()" :key="entry.id" class="border-bottom py-3">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div>
-                    <h6 class="mb-1">{{ entry.date }}</h6>
-                    <div class="d-flex align-items-center mb-2">
-                      <span class="badge" :class="getMoodBadgeClass(entry.mood)">Mood: {{ entry.mood }}/10</span>
-                      <span class="ms-3 text-muted">{{ getMoodDescription(entry.mood) }}</span>
+              <div v-else>
+                <div v-for="entry in [...userMoodEntries].reverse()" :key="entry.id" class="border-bottom py-3">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <h6 class="mb-1">{{ entry.date }}</h6>
+                      <div class="d-flex align-items-center mb-2">
+                        <span class="badge" :class="getMoodBadgeClass(entry.mood)">Mood: {{ entry.mood }}/10</span>
+                        <span class="ms-3 text-muted">{{ getMoodDescription(entry.mood) }}</span>
+                      </div>
+                      <p v-if="entry.notes" class="text-muted mb-0">{{ entry.notes }}</p>
                     </div>
-                    <p v-if="entry.notes" class="text-muted mb-0">{{ entry.notes }}</p>
                   </div>
                 </div>
               </div>
@@ -153,3 +165,14 @@ function addMoodEntry() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.mood-root {
+  background: #eafafc;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+</style>

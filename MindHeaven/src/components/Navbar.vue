@@ -1,67 +1,97 @@
 <script setup>
 import { store } from '../store.js'
-const emit = defineEmits(['open-login-modal'])
+const emit = defineEmits(['signup', 'login'])
+
+function go(page) {
+  store.navigate(page)
+}
+function goSignup() {
+  emit('signup')
+}
+function goLogin() {
+  emit('login')
+}
+function logout() {
+  store.logout()
+}
 </script>
 
 <template>
-  <nav class="navbar navbar-expand-lg navbar-light fixed-top">
-    <div class="container">
-      <a class="navbar-brand fw-bold" href="#" @click.prevent="store.navigate('home')">
-        <i class="fas fa-heart text-primary me-2"></i>MindHaven
-      </a>
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbarNav"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item" v-if="store.isLoggedIn">
-            <a class="nav-link" href="#" @click.prevent="store.navigate('mood-tracker')">
-              <i class="fas fa-chart-line me-1"></i>Mood Tracker
-            </a>
-          </li>
-          <li class="nav-item" v-if="store.isLoggedIn">
-            <a class="nav-link" href="#" @click.prevent="store.navigate('forum')">
-              <i class="fas fa-comments me-1"></i>Community Forum
-            </a>
-          </li>
-          <li class="nav-item" v-if="store.isLoggedIn">
-            <a class="nav-link" href="#" @click.prevent="store.navigate('resources')">
-              <i class="fas fa-book me-1"></i>Resources
-            </a>
-          </li>
-        </ul>
-        <ul class="navbar-nav">
-          <li class="nav-item" v-if="!store.isLoggedIn">
-            <a class="nav-link" href="#" @click.prevent="emit('open-login-modal')">
-              <i class="fas fa-sign-in-alt me-1"></i>Login
-            </a>
-          </li>
-          <li class="nav-item" v-if="store.isLoggedIn">
-            <div class="dropdown">
-              <a
-                class="nav-link dropdown-toggle text-primary fw-bold"
-                href="#"
-                data-bs-toggle="dropdown"
-              >
-                <i class="fas fa-user-circle me-1"></i>{{ store.currentUser.username }}
-                <span class="badge bg-primary ms-1">{{ store.currentUser.role }}</span>
-              </a>
-              <ul class="dropdown-menu">
-                <li>
-                  <a class="dropdown-item" href="#" @click.prevent="store.logout()">
-                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </li>
-        </ul>
-      </div>
+  <div class="custom-navbar">
+    <div class="navbar-left">
+      <span class="brand">MindHaven</span>
     </div>
-  </nav>
+    <div class="navbar-center">
+      <a class="nav-link" :class="{active: store.currentPage === 'home'}" @click="go('home')">Home</a>
+      <a class="nav-link" :class="{active: store.currentPage === 'forum'}" @click="go('forum')">Community</a>
+      <a class="nav-link" :class="{active: store.currentPage === 'mood-tracker'}" @click="go('mood-tracker')">Mood Tracker</a>
+      <a class="nav-link" :class="{active: store.currentPage === 'resources'}" @click="go('resources')">Resources</a>
+    </div>
+    <div class="navbar-right">
+      <button class="nav-btn" v-if="!store.isLoggedIn" @click="goLogin">Log in</button>
+      <button class="nav-btn" v-if="!store.isLoggedIn" @click="goSignup">Sign up</button>
+      <button class="nav-btn" v-if="store.isLoggedIn" @click="logout">Logout</button>
+      <!-- 已移除两个图标按钮 -->
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.custom-navbar {
+  width: 100%;
+  background: #baf3f3;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 32px;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+.brand {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #218c7e;
+}
+.navbar-center {
+  display: flex;
+  gap: 32px;
+}
+.nav-link {
+  font-size: 1.15rem;
+  color: #218c7e;
+  text-decoration: none;
+  padding: 4px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+.nav-link.active,
+.nav-link:hover {
+  background: #eafafc;
+  font-weight: bold;
+}
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.nav-btn {
+  border: 2px solid #218c7e;
+  background: #fff;
+  border-radius: 24px;
+  padding: 6px 22px;
+  font-size: 1rem;
+  margin-right: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.nav-btn:hover {
+  background: #eafafc;
+}
+.nav-icon {
+  font-size: 1.5rem;
+  color: #218c7e;
+  margin-left: 4px;
+}
+</style>
