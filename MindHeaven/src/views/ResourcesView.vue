@@ -75,7 +75,6 @@ function getResourceTypeName(type) {
 function viewResource(resource) {
   resource.views++
   store.showAlert(`Viewing: ${resource.title}`, 'info')
-  // In a real app, you would navigate to a detailed view page
 }
 
 // Function to open the rating modal
@@ -153,14 +152,14 @@ function addResource() {
         </div>
       </div>
 
-      <!-- 仅admin可见的添加资源按钮 -->
+      <!-- Add resource button visible only to admin -->
       <div v-if="store.currentUser?.role === 'admin'" class="mb-3">
         <button class="btn btn-success" @click="showAddResource = true">
           Add Resource
         </button>
       </div>
 
-      <!-- 添加资源弹窗或表单 -->
+      <!-- Add resource modal or form -->
       <div v-if="showAddResource" class="card mb-4">
         <div class="card-body">
           <h5>Add New Resource</h5>

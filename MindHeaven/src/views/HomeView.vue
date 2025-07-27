@@ -6,32 +6,12 @@ const emit = defineEmits(['signup', 'login'])
 <template>
   <div class="home-root">
     <Navbar @signup="emit('signup')" @login="emit('login')" />
-    <!-- 下面是原有内容 -->
-    <!-- 顶部导航栏 -->
-    <!-- <div class="custom-navbar">
-      <div class="navbar-left">
-        <span class="brand">MindHaven</span>
-      </div>
-      <div class="navbar-center">
-        <a class="nav-link active" href="#">Home</a>
-        <a class="nav-link" href="#">Community</a>
-        <a class="nav-link" href="#">Mood Tracker</a>
-        <a class="nav-link" href="#">Resources</a>
-      </div>
-      <div class="navbar-right">
-        <button class="nav-btn" @click="emit('open-login-modal')">Log in</button>
-        <button class="nav-btn" @click="emit('open-signup-modal')">Sign up</button>
-        <i class="fas fa-cog nav-icon"></i>
-        <i class="fas fa-user-circle nav-icon"></i>
-      </div>
-    </div> -->
 
-    <!-- 主标题 -->
     <div class="main-title">
       <h1>Welcome to MindHaven:<br />You Are Not Alone</h1>
     </div>
 
-    <!-- 三大功能区 -->
+    <!-- Three Feature Sections -->
     <div class="features-row">
       <div class="feature-card">
         <i class="fas fa-users fa-3x feature-icon"></i>
@@ -50,19 +30,19 @@ const emit = defineEmits(['signup', 'login'])
       </div>
     </div>
 
-    <!-- 社区快照 -->
+    <!-- Community Snapshot -->
     <div class="community-snapshot">
       <div class="snapshot-title">Community Snapshot</div>
       <div class="snapshot-desc">Here's a brief look at our supportive community</div>
       <div class="snapshot-box">
-        <!-- 可放置社区统计或示例内容 -->
+        <!-- Community statistics or sample content can be placed here -->
         <div class="snapshot-line"></div>
         <div class="snapshot-line"></div>
         <div class="snapshot-line"></div>
       </div>
     </div>
 
-    <!-- 底部链接 -->
+    <!-- Footer Links -->
     <div class="footer-links">
       <a href="#">Contact</a>
       <a href="#">Privacy Policy</a>
@@ -80,7 +60,7 @@ const emit = defineEmits(['signup', 'login'])
   flex-direction: column;
   align-items: center;
 }
-/* 其余样式同首页 */
+/* The rest of the styles are the same as the home page */
 .custom-navbar {
   width: 100%;
   background: #baf3f3;
@@ -167,7 +147,7 @@ const emit = defineEmits(['signup', 'login'])
   background: #eafafc;
   border-radius: 12px;
   padding: 18px 12px;
-  box-shadow: 0 2px 8px rgba(33,140,126,0.08);
+  box-shadow: 0 2px 8px rgba(33, 140, 126, 0.08);
 }
 .feature-icon {
   color: #218c7e;
@@ -191,7 +171,7 @@ const emit = defineEmits(['signup', 'login'])
   border-radius: 16px;
   margin-bottom: 32px;
   padding: 24px 32px;
-  box-shadow: 0 2px 8px rgba(33,140,126,0.06);
+  box-shadow: 0 2px 8px rgba(33, 140, 126, 0.06);
   text-align: left;
 }
 .snapshot-title {

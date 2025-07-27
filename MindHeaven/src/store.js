@@ -1,6 +1,6 @@
 import { reactive, watchEffect } from 'vue'
 
-// 加载数据
+// Load data
 function load(key, fallback) {
   try {
     const val = localStorage.getItem(key)
@@ -10,7 +10,7 @@ function load(key, fallback) {
   }
 }
 
-// 保存数据
+// Save data
 function save(key, val) {
   localStorage.setItem(key, JSON.stringify(val))
 }
@@ -120,7 +120,7 @@ export const store = reactive({
   }
 })
 
-// 自动保存
+// Autosave
 watchEffect(() => {
   save('users', store.users)
   save('moodEntries', store.moodEntries)

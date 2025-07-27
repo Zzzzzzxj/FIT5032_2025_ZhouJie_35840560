@@ -17,12 +17,12 @@ const loginForm = ref({
   role: 'user'
 })
 
-// 监听 props.mode 变化
+// Watch for changes in the mode prop
 watch(() => props.mode, (val) => {
   isRegistering.value = val === 'signup'
 })
 
-// Validation
+// Validation for the form
 const isValidLoginForm = computed(() => {
   const form = loginForm.value
   if (form.username.length < 3 || form.username.length > 20) return false
@@ -31,18 +31,20 @@ const isValidLoginForm = computed(() => {
   return true
 })
 
+// Function to handle user login
 function handleLogin() {
   const user = store.users.find(
     u => u.username === loginForm.value.username && u.password === loginForm.value.password
   )
   if (user) {
-    store.login(user) // Use the central login method
+    store.login(user) 
     emit('close-modal')
   } else {
     loginError.value = 'Invalid username or password.'
   }
 }
 
+// Function to handle new user registration
 function handleRegister() {
   if (!isValidLoginForm.value) return
   const existingUser = store.users.find(u => u.username === loginForm.value.username)
@@ -63,6 +65,7 @@ function handleRegister() {
   emit('close-modal')
 }
 
+// Function to handle form submission
 function handleSubmit() {
     loginError.value = '';
     if (isRegistering.value) {
@@ -86,12 +89,12 @@ function handleSubmit() {
             <div class="mb-3">
               <label class="form-label">Username</label>
               <input type="text" class="form-control" v-model="loginForm.username" required minlength="3" maxlength="20" />
-              <div class="form-text">Must be 3-20 characters.</div>
+              <div class="form-text" v-if="loginForm.username.length < 3">Must be 3-20 characters.</div>
             </div>
             <div class="mb-3">
               <label class="form-label">Password</label>
               <input type="password" class="form-control" v-model="loginForm.password" required minlength="6" />
-               <div class="form-text">Must be at least 6 characters.</div>
+               <div class="form-text" v-if="loginForm.password.length < 6">Must be at least 6 characters.</div>
             </div>
             <div class="mb-3" v-if="isRegistering">
               <label class="form-label">Confirm Password</label>

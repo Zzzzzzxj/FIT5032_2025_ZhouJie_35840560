@@ -6,7 +6,7 @@ import { store } from '../store.js'
 const emit = defineEmits(['signup', 'login'])
 
 const props = defineProps({
-  mode: { type: String, default: 'login' }
+  mode: { type: String, default: 'login' },
 })
 
 const isRegistering = ref(props.mode === 'signup')
@@ -16,16 +16,17 @@ const loginForm = ref({
   password: '',
   confirmPassword: '',
   email: '',
-  role: 'user'
+  role: 'user',
 })
 
-watch(() => props.mode, (val) => {
-  isRegistering.value = val === 'signup'
-})
-
-const isValidEmail = computed(() =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginForm.value.email)
+watch(
+  () => props.mode,
+  (val) => {
+    isRegistering.value = val === 'signup'
+  },
 )
+
+const isValidEmail = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginForm.value.email))
 
 const isValidLoginForm = computed(() => {
   const form = loginForm.value
@@ -38,7 +39,7 @@ const isValidLoginForm = computed(() => {
 
 function handleLogin() {
   const user = store.users.find(
-    u => u.username === loginForm.value.username && u.password === loginForm.value.password
+    (u) => u.username === loginForm.value.username && u.password === loginForm.value.password,
   )
   if (user) {
     store.login(user)
@@ -50,7 +51,7 @@ function handleLogin() {
 
 function handleRegister() {
   if (!isValidLoginForm.value) return
-  const existingUser = store.users.find(u => u.username === loginForm.value.username)
+  const existingUser = store.users.find((u) => u.username === loginForm.value.username)
   if (existingUser) {
     loginError.value = 'This username is already taken.'
     return
@@ -59,7 +60,7 @@ function handleRegister() {
     id: Date.now(),
     username: loginForm.value.username,
     password: loginForm.value.password,
-    role: loginForm.value.role
+    role: loginForm.value.role,
   }
   store.users.push(newUser)
   store.login(newUser)
@@ -80,24 +81,49 @@ function handleSubmit() {
   <div class="login-root">
     <Navbar @signup="emit('signup')" @login="emit('login')" />
     <div class="login-page">
-      <div class="login-form card mx-auto" style="max-width: 400px;">
+      <div class="login-form card mx-auto" style="max-width: 400px">
         <div class="card-body">
           <h3 class="mb-4 text-center">{{ isRegistering ? 'Create Account' : 'Login' }}</h3>
           <form @submit.prevent="handleSubmit">
             <div class="mb-3">
               <label class="form-label">Username</label>
-              <input type="text" class="form-control" v-model="loginForm.username" required minlength="3" maxlength="20" />
-              <div class="form-text">Must be 3-20 characters.</div>
+              <input
+                type="text"
+                class="form-control"
+                v-model="loginForm.username"
+                required
+                minlength="3"
+                maxlength="20"
+              />
+              <div class="form-text" v-if="loginForm.username.length < 3">
+                Must be 3-20 characters.
+              </div>
             </div>
             <div class="mb-3">
               <label class="form-label">Password</label>
-              <input type="password" class="form-control" v-model="loginForm.password" required minlength="6" />
-              <div class="form-text">Must be at least 6 characters.</div>
+              <input
+                type="password"
+                class="form-control"
+                v-model="loginForm.password"
+                required
+                minlength="6"
+              />
+              <div class="form-text" v-if="loginForm.password.length < 6">
+                Must be at least 6 characters.
+              </div>
             </div>
             <div class="mb-3" v-if="isRegistering">
               <label class="form-label">Confirm Password</label>
-              <input type="password" class="form-control" v-model="loginForm.confirmPassword" required />
-              <div class="form-text text-danger" v-if="loginForm.password !== loginForm.confirmPassword && loginForm.confirmPassword">
+              <input
+                type="password"
+                class="form-control"
+                v-model="loginForm.confirmPassword"
+                required
+              />
+              <div
+                class="form-text text-danger"
+                v-if="loginForm.password !== loginForm.confirmPassword && loginForm.confirmPassword"
+              >
                 Passwords do not match.
               </div>
             </div>
@@ -121,8 +147,14 @@ function handleSubmit() {
             </button>
           </form>
           <div class="text-center mt-3">
-            <a href="#" @click.prevent="isRegistering = !isRegistering" class="text-decoration-none">
-              {{ isRegistering ? 'Already have an account? Login' : "Don't have an account? Register" }}
+            <a
+              href="#"
+              @click.prevent="isRegistering = !isRegistering"
+              class="text-decoration-none"
+            >
+              {{
+                isRegistering ? 'Already have an account? Login' : "Don't have an account? Register"
+              }}
             </a>
           </div>
         </div>
@@ -161,7 +193,8 @@ function handleSubmit() {
   font-weight: 500;
   color: #6c5ce7;
 }
-input.form-control, select.form-select {
+input.form-control,
+select.form-select {
   border-radius: 14px;
   font-size: 1.05em;
   padding: 10px 18px;
