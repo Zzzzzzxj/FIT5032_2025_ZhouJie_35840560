@@ -24,12 +24,26 @@ const handleLogout = () => {
       <li class="nav-item">
         <router-link to="/about" class="nav-link" active-class="active">About</router-link>
       </li>
-      <!-- Conditionally render Login/Logout link based on authentication status -->
+      <li class="nav-item" v-if="!isAuthenticated">
+        <router-link to="/addbook" class="nav-link" active-class="active">Add Book</router-link>
+      </li>
       <li class="nav-item" v-if="!isAuthenticated">
         <router-link to="/login" class="nav-link" active-class="active">Login</router-link>
       </li>
       <li class="nav-item" v-else>
         <a href="#" @click.prevent="handleLogout" class="nav-link">Logout</a>
+      </li>
+      <li class="nav-item">
+        <router-link to="/Firelogin" class="nav-link" active-class="active">Firebase Login</router-link>
+      </li>
+      <li class="nav-item">
+        <router-link to="/FireRegister" class="nav-link" active-class="active">Firebase Register</router-link>
+      </li>
+      <li>
+        <router-link to="/WeatherCheck" class="nav-link" active-class="active">Get Weather</router-link>
+      </li>
+      <li>
+        <router-link to="/CountBookAPI" class="nav-link" active-class="active">Count Book API</router-link>
       </li>
     </ul>
   </header>

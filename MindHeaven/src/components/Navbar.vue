@@ -31,7 +31,6 @@ function logout() {
       <button class="nav-btn" v-if="!store.isLoggedIn" @click="goLogin">Log in</button>
       <button class="nav-btn" v-if="!store.isLoggedIn" @click="goSignup">Sign up</button>
       <button class="nav-btn" v-if="store.isLoggedIn" @click="logout">Logout</button>
-      <!-- 已移除两个图标按钮 -->
     </div>
   </div>
 </template>
