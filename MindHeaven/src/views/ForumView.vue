@@ -1,22 +1,20 @@
 <template>
   <section class="wrap">
-    <header class="head">
-      <h1>Community Forum</h1>
-      <div class="head__actions">
-        <Button icon="pi pi-plus" label="New Post" @click="openComposer" />
-        <Button
-          icon="pi pi-flag"
-          label="Report Selected"
-          severity="secondary"
-          :disabled="!selectedRows.length"
-          @click="reportSelected"
-        />
-      </div>
-    </header>
+    <div class="section-header">
+  <h1 class="page-title">Community Forum</h1>
+  <p class="page-desc">Be kind and respectful. If you see content that needs moderator attention, use “Report”.</p>
 
-    <p class="muted">
-      Be kind and respectful. If you see content that needs moderator attention, use “Report”.
-    </p>
+  <div class="head__actions" style="margin-top:10px; display:flex; gap:8px; justify-content:center;">
+    <Button icon="pi pi-plus" label="New Post" @click="openComposer" />
+    <Button
+      icon="pi pi-flag"
+      label="Report Selected"
+      severity="secondary"
+      :disabled="!selectedRows.length"
+      @click="reportSelected"
+    />
+  </div>
+</div>
 
     <Card class="card-panel">
       <template #title>Community Posts</template>
@@ -69,11 +67,11 @@
           <Column header="Actions" :exportable="false" style="min-width:12rem">
             <template #body="{ data }">
               <div class="row-actions">
-                <!-- 普通用户操作 -->
+                <!-- user -->
                 <Button icon="pi pi-pencil" rounded text @click="editPost(data)" aria-label="Edit" />
                 <Button icon="pi pi-flag" rounded text severity="warn" @click="reportPost(data)" aria-label="Report" />
 
-                <!-- 管理员操作 -->
+                <!-- admin -->
                 <Button
                   v-if="isAdmin"
                   icon="pi pi-times"
@@ -103,7 +101,6 @@
       </template>
     </Card>
 
-    <!-- 发帖对话框 -->
     <Dialog v-model:visible="composerVisible" header="Create a post" modal :style="{ width: '32rem' }">
       <div class="dlg-grid">
         <div>
@@ -152,7 +149,7 @@ import { sanitizeText } from '@/utils/sanitize'
 const toast = useToast()
 const isAdmin = computed(() => store.can('post:moderate'))
 
-/* 过滤器 */
+/* filter */
 const globalFilter = ref('')
 const categoryFilter = ref(null)
 const categoryOptions = [
@@ -170,7 +167,6 @@ const filters = ref({
 watch(globalFilter, v => { filters.value.global.value = v || null })
 watch(categoryFilter, v => { filters.value.category.value = v || null })
 
-/* 数据源：所有用户都能看到全部帖子 */
 const tableRows = computed(() => {
   return (store.forumPosts.value || []).map(p => ({
     ...p,
@@ -178,7 +174,6 @@ const tableRows = computed(() => {
   }))
 })
 
-/* 工具 */
 function statusColor(status) {
   switch ((status || '').toLowerCase()) {
     case 'open': return 'success'
@@ -191,10 +186,8 @@ function formatDate(ts) {
   try { return new Date(ts).toLocaleString() } catch { return '-' }
 }
 
-/* 选择 */
 const selectedRows = ref([])
 
-/* 发帖对话框 */
 const composerVisible = ref(false)
 const form = reactive({ title: '', category: null, tags: '', content: '' })
 
@@ -241,7 +234,6 @@ function submitPost() {
   Object.assign(form, { title: '', category: null, tags: '', content: '' })
 }
 
-/* 行级操作 */
 function editPost() {
   toast.add({ severity: 'info', summary: 'Edit coming soon', life: 1500 })
 }

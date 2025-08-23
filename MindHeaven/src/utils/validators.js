@@ -10,7 +10,7 @@ export const intRange = (min, max) => (v) => {
 export function runValidators(value, validators = []) {
   for (const rule of validators) {
     const ok = rule(value)
-    if (ok !== true) return ok // 返回第一条错误消息
+    if (ok !== true) return ok 
   }
   return true
 }

@@ -1,11 +1,9 @@
 <template>
   <section class="wrap">
-    <header class="head">
-      <div>
-        <h1>Resources</h1>
-        <p class="muted">Browse articles, videos and support contacts.</p>
-      </div>
-    </header>
+    <div class="section-header">
+  <h1 class="page-title">Resources</h1>
+  <p class="page-desc">Curated articles, videos and contacts to support your wellbeing.</p>
+</div>
 
     <Card class="card-panel">
       <template #title>Resource Library</template>

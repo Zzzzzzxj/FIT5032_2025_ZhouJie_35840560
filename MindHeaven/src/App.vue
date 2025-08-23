@@ -8,7 +8,6 @@
     @logout="onLogout"
   />
 
-  <!-- ✅ Toast 容器只放一次 -->
   <Toast position="top-right" />
 
   <main class="min-h-screen">
@@ -27,8 +26,6 @@
 import { ref, onMounted } from 'vue'
 import { store } from './store'
 import { listenAuth, logout as fbLogout } from './firebase.js'
-
-// 组件
 import Navbar from './components/Navbar.vue'
 import LoginModal from './components/LoginModal.vue'
 import HomeView from './views/HomeView.vue'
@@ -38,7 +35,6 @@ import ResourcesView from './views/ResourcesView.vue'
 
 const showLogin = ref(false)
 
-// 同步 Firebase 登录态到本地 store，并解析角色
 onMounted(() => {
   listenAuth((user) => {
     if (user) {
@@ -57,20 +53,17 @@ onMounted(() => {
   })
 })
 
-// 导航
 function onNavigate(page) {
   store.navigate(page)
 }
 
-// 登出
 async function onLogout() {
   await fbLogout().catch(() => {})
-  store.logout()        // 仅做 UI 层收尾与提示
+  store.logout()       
 }
 </script>
 
 <style scoped>
-/* 简易 alert 样式（点击即关闭） */
 .alerts { position: fixed; right: 12px; bottom: 12px; display: grid; gap: 8px; z-index: 60; }
 .alert {
   background: #fff; color: #123; border-left: 4px solid #8aa; border-radius: 10px;

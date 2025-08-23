@@ -7,7 +7,6 @@
         </div>
       </header>
   
-      <!-- 搜索与动作区 -->
       <div class="flex flex-col sm:flex-row gap-3">
         <div class="flex-1">
           <label class="text-sm font-medium block mb-1">Search places (e.g. “psychological counseling”, “crisis center”)</label>
@@ -30,7 +29,6 @@
         </div>
       </div>
   
-      <!-- 搜索结果 -->
       <div v-if="results.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <article
           v-for="r in results"
@@ -46,7 +44,6 @@
         </article>
       </div>
   
-      <!-- 地图 -->
       <div ref="mapEl" class="w-full h-[70vh] rounded-xl overflow-hidden border"></div>
   
       <div class="sr-only">
@@ -62,8 +59,7 @@
   import 'leaflet-routing-machine/dist/leaflet-routing-machine.css'
   import 'leaflet-routing-machine'
   
-  // —— 修复 Vite/webpack 打包后 Leaflet 默认图标路径问题 ——
-  // 这几行保证地图上的默认 marker 图标正常显示：
+
   import iconUrl from 'leaflet/dist/images/marker-icon.png'
   import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png'
   import shadowUrl from 'leaflet/dist/images/marker-shadow.png'
@@ -71,31 +67,25 @@
   
   const mapEl = ref(null)
   let map, routing, startMarker, destMarker
-  
-  // 搜索框
+
   const q = ref('')
   const results = ref([])
   let debounceTimer = null
   const locating = ref(false)
   
   onMounted(() => {
-    // 初始化地图（默认中心：东京站）
     map = L.map(mapEl.value).setView([35.681, 139.767], 12)
-  
-    // OSM 瓦片层
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map)
-  
-    // 初始化 Routing 控件（Leaflet Routing Machine）
+
     routing = L.Routing.control({
       waypoints: [],
       routeWhileDragging: true,
-      show: false, // 初始隐藏面板（可改为 true 显示路线步骤）
-      // 语言、线路样式等可按需配置
+      show: false, 
     }).addTo(map)
-  
-    // 地图点击：第一次点击设起点，第二次点击设终点并画路线
+
     let lastClickSetStart = false
     map.on('click', (e) => {
       if (!lastClickSetStart) {
@@ -107,8 +97,7 @@
       }
     })
   })
-  
-  // —— 搜索逻辑（Nominatim，无需 token）——
+
   function onQueryInput() {
     clearTimeout(debounceTimer)
     const query = q.value?.trim()
@@ -121,11 +110,9 @@
   
   async function doSearch(query) {
     try {
-      // 官方公共实例有节流限制，课堂/作业演示完全够用
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(query)}`
       const res = await fetch(url, {
         headers: {
-          // 友好一些：告诉对方来源与语言（非必须）
           'Accept-Language': 'en'
         }
       })
@@ -135,7 +122,6 @@
         lat: parseFloat(d.lat),
         lon: parseFloat(d.lon)
       }))
-      // 自动飞到第一个结果
       if (results.value[0]) {
         flyTo([results.value[0].lat, results.value[0].lon], 13)
       }
@@ -145,16 +131,14 @@
     }
   }
   
-  // 把搜索结果“打点”
+
   function pinHere(r) {
     const ll = L.latLng(r.lat, r.lon)
     setDestination(ll, { fly: true, route: false })
   }
   
-  // 从搜索结果“规划路线”（如果没有起点，优先用“我的位置”，否则提示地图点击一次设置起点）
   async function goHere(r) {
     const ll = L.latLng(r.lat, r.lon)
-    // 如果没有起点，尝试定位；失败则提示在地图上点击一次设置起点
     if (!startMarker) {
       const ok = await tryUseGeolocation()
       if (!ok) {
@@ -164,8 +148,7 @@
     }
     setDestination(ll, { fly: true, route: true })
   }
-  
-  // “我的位置”作为起点
+
   async function useMyLocation() {
     locating.value = true
     const ok = await tryUseGeolocation(true)
@@ -189,24 +172,20 @@
     })
   }
   
-  // —— 辅助函数 ——
-  
-  // 设起点
+
   function setStart(latlng) {
     if (startMarker) { map.removeLayer(startMarker) }
     startMarker = L.marker(latlng, { title: 'Start' }).addTo(map)
     updateRoute()
   }
-  
-  // 设终点
+
   function setDestination(latlng, opts = { fly: false, route: false }) {
     if (destMarker) { map.removeLayer(destMarker) }
     destMarker = L.marker(latlng, { title: 'Destination' }).addTo(map)
     if (opts.fly) flyTo(latlng, 14)
     if (opts.route) updateRoute()
   }
-  
-  // 根据当前起点/终点更新路线
+
   function updateRoute() {
     const start = startMarker?.getLatLng()
     const dest = destMarker?.getLatLng()
@@ -214,14 +193,11 @@
       routing.setWaypoints([start, dest])
     }
   }
-  
-  // 平滑飞行
+
   function flyTo(latlng, zoom = 13) {
     map?.flyTo(latlng, zoom, { duration: 0.8 })
   }
   </script>
   
-  <style scoped>
-  /* 让地图容器圆角且有边框，已在模板上加了 border/rounded */
-  </style>
+
   

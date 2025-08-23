@@ -1,4 +1,3 @@
-// src/utils/exportPdf.js
 import jsPDF from 'jspdf'
 
 export function exportMoodSummaryPdf(summary, filename = 'mood_summary.pdf') {

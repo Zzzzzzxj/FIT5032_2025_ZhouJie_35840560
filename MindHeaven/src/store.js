@@ -1,6 +1,5 @@
 import { ref, watchEffect } from 'vue'
 
-/* -------------------- 小工具 -------------------- */
 function load(key, fallback) {
   try {
     const raw = localStorage.getItem(key)
@@ -13,17 +12,15 @@ function save(key, val) {
   localStorage.setItem(key, JSON.stringify(val))
 }
 
-/* -------------------- 基础状态 -------------------- */
 const currentPage  = ref('home')      // 'home' | 'forum' | 'mood-tracker' | 'resources'
 const isLoggedIn   = ref(false)
 const currentUser  = ref(null)        // { uid, displayName, email }
 const alerts       = ref([])          // [{id, message, type}]
 
-/* -------------------- 业务数据 -------------------- */
-// Mood 记录：默认空
+
 const moodEntries  = ref(load('moodEntries', []))
 
-// Forum 帖子（与 ForumView 字段对齐）
+
 const forumPosts   = ref(load('forumPosts', [
   {
     id: 'p_1724300000001',
@@ -115,7 +112,7 @@ const forumPosts   = ref(load('forumPosts', [
   }
 ]))
 
-// Resources 初始（先给 6 条，后面自动补种到 30 条）
+
 const resources    = ref(load('resources', [
   { id: 3001, title: 'Coping with Exam Stress',        description: 'Practical strategies to manage stress during exam periods.',                             type: 'article', date: '2025-07-10', rating: 4.5, ratingCount: 4, views: 12 },
   { id: 3002, title: 'Guided Meditation for Anxiety',  description: 'A 10-minute guided meditation video to help reduce anxiety.',                          type: 'video',   date: '2025-07-12', rating: 4.8, ratingCount: 6, views: 20 },
@@ -125,14 +122,13 @@ const resources    = ref(load('resources', [
   { id: 3006, title: 'Campus Counseling Contact',      description: 'Book an appointment with campus counseling (Mon–Fri 9:00–17:00).',                     type: 'contact', date: '2025-07-20', rating: 4.9, ratingCount: 7, views: 22 }
 ]))
 
-/* ---------- 论坛旧数据迁移（把 content/date 映射到新结构） ---------- */
 ;(function migrateForumPostsIfNeeded() {
   try {
     const list = forumPosts.value || []
     let changed = false
 
     const norm = list.map((p, idx) => {
-      if (p.title && p.createdAt) return p   // 已是新结构
+      if (p.title && p.createdAt) return p   
       changed = true
 
       const title = p.title || (p.content ? String(p.content).slice(0, 60) : 'Post')
@@ -159,11 +155,34 @@ const resources    = ref(load('resources', [
   } catch (e) { console.warn('forumPosts migration skipped:', e) }
 })()
 
-/* ---------- 资源自动补种到 30 条 ---------- */
+
+;(function ensureSeedPosts() {
+  try {
+    const desired = [
+      { id:'p_seed1', authorId:'seed_u1', author:'Alex',   title:'How do you cope with exam stress?', category:'share', tags:['exam','stress','tips'], content:'Sharing my routine: short walks + breathing + 25-min focus blocks.', createdAt: Date.now()-86400000*2, status:'open' },
+      { id:'p_seed2', authorId:'seed_u2', author:'Bianca', title:'Any advice for sudden anxiety before presentations?', category:'help', tags:['anxiety','presentation','cbt'], content:'Looking for quick grounding techniques that work in 1–2 minutes.', createdAt: Date.now()-86400000*3, status:'open' },
+      { id:'p_seed3', authorId:'seed_u3', author:'Chen',   title:'CBT worksheet that actually helped me', category:'learn', tags:['cbt','worksheet','resource'], content:'A simple thought record makes reframing easier. Happy to share how I fill it.', createdAt: Date.now()-86400000*5, status:'open' },
+      { id:'p_seed4', authorId:'seed_u4', author:'Dina',   title:'Does journaling improve your mood over time?', category:'share', tags:['journaling','habits'], content:'Two weeks in, I can see patterns. Curious if others felt similar progress.', createdAt: Date.now()-86400000*7, status:'open' },
+      { id:'p_seed5', authorId:'seed_u5', author:'Ethan',  title:'Breathing apps vs. simple timer?', category:'help', tags:['breathing','apps','timer'], content:'Do you prefer guided apps or just a timer with box breathing?', createdAt: Date.now()-86400000*9, status:'flagged' },
+      { id:'p_seed6', authorId:'seed_u6', author:'Farah',  title:'My self-care checklist after long days', category:'share', tags:['selfcare','routine','sleep'], content:'Hydration, 10-min stretch, light dinner, and a short gratitude note.', createdAt: Date.now()-86400000*10, status:'open' },
+      { id:'p_seed7', authorId:'seed_u2', author:'Bianca', title:'Learning resource: grounding 5-4-3-2-1', category:'learn', tags:['grounding','panic','howto'], content:'This method helps me redirect attention during spikes. Here’s how I apply it.', createdAt: Date.now()-86400000*12, status:'open' },
+      { id:'p_seed8', authorId:'seed_u3', author:'Chen',   title:'Closed: duplicate post test', category:'learn', tags:['moderation'], content:'Demo post to show admin “close” action.', createdAt: Date.now()-86400000*15, status:'closed' }
+    ]
+
+    const existing = forumPosts.value || []
+    if (existing.length >= 8) return
+
+    const have = new Set(existing.map(p => p.id))
+    const extra = desired.filter(p => !have.has(p.id))
+    if (extra.length) {
+      forumPosts.value = [...existing, ...extra]
+    }
+  } catch {}
+})()
+
 ;(function ensureSeedResources() {
   try {
     const desired = [
-      // 3001~3006 已在上面 fallback；这里从 3007 开始到 3030
       { id: 3007, title: 'Progressive Muscle Relaxation', description: 'Guide to relax muscle groups to reduce tension.', type: 'article', date: '2025-07-21', rating: 4.4, ratingCount: 4, views: 10 },
       { id: 3008, title: 'Sleep Hygiene Checklist', description: 'Simple nightly checklist to improve sleep quality.', type: 'article', date: '2025-07-22', rating: 4.6, ratingCount: 3, views: 12 },
       { id: 3009, title: 'Body Scan Meditation (10 min)', description: 'Video guide to scan & relax the body from head to toe.', type: 'video', date: '2025-07-22', rating: 4.8, ratingCount: 6, views: 18 },
@@ -193,10 +212,8 @@ const resources    = ref(load('resources', [
     const existing = resources.value || []
     const have = new Set(existing.map(x => x.id))
     const extra = desired.filter(x => !have.has(x.id))
-    if (extra.length) {
-      resources.value = [...existing, ...extra]
-    }
-    // 若仍不足 30（例如本地只保留了很少条），再把 3001~3006 也纳入去重合集
+    if (extra.length) resources.value = [...existing, ...extra]
+
     if (resources.value.length < 30) {
       const allDesired = [
         ...desired,
@@ -214,9 +231,8 @@ const resources    = ref(load('resources', [
   } catch {}
 })()
 
-/* -------------------- 角色与权限（C.2） -------------------- */
-const currentRole = ref('guest')                 // 'guest' | 'user' | 'admin'
-const roleMap     = ref(load('roleMap', {}))     // { [uid]: 'user'|'admin' }
+const currentRole = ref('guest')                
+const roleMap     = ref(load('roleMap', {}))     
 
 function setRole(uid, role) {
   if (!uid) return
@@ -248,7 +264,6 @@ function can(action) {
   return hasRole(policy[action] || 'user')
 }
 
-/* -------------------- 全局提示 -------------------- */
 function showAlert(message, type = 'info') {
   const item = { id: Date.now() + Math.random(), message, type }
   alerts.value.push(item)
@@ -259,13 +274,11 @@ function removeAlert(id) {
   if (i > -1) alerts.value.splice(i, 1)
 }
 
-/* -------------------- 导航（白名单） -------------------- */
 const allowedPages = new Set(['home', 'forum', 'mood-tracker', 'resources'])
 function navigate(page) {
   currentPage.value = allowedPages.has(page) ? page : 'home'
 }
 
-/* -------------------- 登出（UI 收尾） -------------------- */
 function logout() {
   isLoggedIn.value = false
   currentUser.value = null
@@ -274,13 +287,10 @@ function logout() {
   showAlert('You have been logged out.', 'info')
 }
 
-/* -------------------- 持久化 -------------------- */
 watchEffect(() => { save('moodEntries', moodEntries.value) })
 watchEffect(() => { save('forumPosts', forumPosts.value)   })
 watchEffect(() => { save('resources', resources.value)     })
-// watchEffect(() => { save('roleMap', roleMap.value) }) // setRole 时已保存
 
-/* -------------------- 导出 -------------------- */
 export const store = {
   // state
   currentPage,
@@ -305,41 +315,7 @@ export const store = {
   navigate,
   logout
 }
+
 if (typeof window !== 'undefined') {
   window.store = store
-};
-(function ensureSeedPosts() {
-  try {
-    const desired = [
-      {
-        id: 'p_seed1',
-        authorId: 'seed_u1',
-        author: 'Alex',
-        title: 'How do you cope with exam stress?',
-        category: 'share',
-        tags: ['exam', 'stress', 'tips'],
-        content: 'Sharing my routine: short walks + breathing + 25-min focus blocks.',
-        createdAt: Date.now() - 86400000 * 2,
-        status: 'open'
-      },
-      {
-        id: 'p_seed2',
-        authorId: 'seed_u2',
-        author: 'Bianca',
-        title: 'Any advice for sudden anxiety before presentations?',
-        category: 'help',
-        tags: ['anxiety', 'presentation', 'cbt'],
-        content: 'Looking for quick grounding techniques that work in 1–2 minutes.',
-        createdAt: Date.now() - 86400000 * 3,
-        status: 'open'
-      },
-      // ...其余 6 条，和之前 seed 相同
-    ]
-    const existing = forumPosts.value || []
-    if (existing.length < 5) {
-      const have = new Set(existing.map(x => x.id))
-      const extra = desired.filter(p => !have.has(p.id))
-      if (extra.length) forumPosts.value = [...existing, ...extra]
-    }
-  } catch {}
-})()
+}
