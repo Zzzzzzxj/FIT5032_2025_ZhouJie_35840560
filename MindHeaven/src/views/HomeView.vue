@@ -1,239 +1,65 @@
-<script setup>
-import Navbar from '../components/Navbar.vue'
-const emit = defineEmits(['signup', 'login'])
-</script>
-
 <template>
-  <div class="home-root">
-    <Navbar @signup="emit('signup')" @login="emit('login')" />
+  <section class="wrap">
+    <!-- Hero -->
+    <header class="hero">
+      <h1>Welcome to MindHaven</h1>
+      <h2>You Are Not Alone</h2>
+      <p>Tools for tracking your mood, learning coping skills, and finding support.</p>
+    </header>
 
-    <div class="main-title">
-      <h1>Welcome to MindHaven:<br />You Are Not Alone</h1>
+    <!-- 三个功能卡片 -->
+    <div class="cards">
+      <article class="card" @click="go('forum')" tabindex="0" @keyup.enter="go('forum')">
+        <div class="icon">👥</div>
+        <h3>Community</h3>
+        <p>Join discussions with other members</p>
+      </article>
+
+      <article class="card" @click="go('mood-tracker')" tabindex="0" @keyup.enter="go('mood-tracker')">
+        <div class="icon">📈</div>
+        <h3>Mood Tracker</h3>
+        <p>Track your emotional well-being</p>
+      </article>
+
+      <article class="card" @click="go('resources')" tabindex="0" @keyup.enter="go('resources')">
+        <div class="icon">📘</div>
+        <h3>Resources</h3>
+        <p>Access articles and coping tools</p>
+      </article>
     </div>
 
-    <!-- Three Feature Sections -->
-    <div class="features-row">
-      <div class="feature-card">
-        <i class="fas fa-users fa-3x feature-icon"></i>
-        <div class="feature-title">Community</div>
-        <div class="feature-desc">Join discussions with other members</div>
+    <!-- Snapshot 占位 -->
+    <section class="panel">
+      <h3>Community Snapshot</h3>
+      <p class="muted">Here’s a brief look at our supportive community.</p>
+      <div class="sk-wrap">
+        <div class="sk"></div><div class="sk"></div><div class="sk"></div>
       </div>
-      <div class="feature-card">
-        <i class="fas fa-chart-line fa-3x feature-icon"></i>
-        <div class="feature-title">Mood Tracker</div>
-        <div class="feature-desc">Track your emotional well-being</div>
-      </div>
-      <div class="feature-card">
-        <i class="fas fa-book fa-3x feature-icon"></i>
-        <div class="feature-title">Resources</div>
-        <div class="feature-desc">Access articles and coping tools</div>
-      </div>
-    </div>
-
-    <!-- Community Snapshot -->
-    <div class="community-snapshot">
-      <div class="snapshot-title">Community Snapshot</div>
-      <div class="snapshot-desc">Here's a brief look at our supportive community</div>
-      <div class="snapshot-box">
-        <!-- Community statistics or sample content can be placed here -->
-        <div class="snapshot-line"></div>
-        <div class="snapshot-line"></div>
-        <div class="snapshot-line"></div>
-      </div>
-    </div>
-
-    <!-- Footer Links -->
-    <div class="footer-links">
-      <a href="#">Contact</a>
-      <a href="#">Privacy Policy</a>
-      <a href="#">About us</a>
-    </div>
-  </div>
+    </section>
+  </section>
 </template>
 
+<script setup>
+import { store } from '@/store'
+function go(p){ store.navigate(p) }
+</script>
+
 <style scoped>
-.home-root {
-  background: #eafafc;
-  min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-/* The rest of the styles are the same as the home page */
-.custom-navbar {
-  width: 100%;
-  background: #baf3f3;
-  border-radius: 12px 12px 0 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 32px;
-  box-sizing: border-box;
-  margin-bottom: 12px;
-}
-.brand {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #218c7e;
-}
-.navbar-center {
-  display: flex;
-  gap: 32px;
-}
-.nav-link {
-  font-size: 1.15rem;
-  color: #218c7e;
-  text-decoration: none;
-  padding: 4px 12px;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-.nav-link.active,
-.nav-link:hover {
-  background: #eafafc;
-  font-weight: bold;
-}
-.navbar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.nav-btn {
-  border: 2px solid #218c7e;
-  background: #fff;
-  border-radius: 24px;
-  padding: 6px 22px;
-  font-size: 1rem;
-  margin-right: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.nav-btn:hover {
-  background: #eafafc;
-}
-.nav-icon {
-  font-size: 1.5rem;
-  color: #218c7e;
-  margin-left: 4px;
-}
-
-.main-title {
-  margin: 32px 0 24px 0;
-  text-align: center;
-}
-.main-title h1 {
-  font-size: 2.5rem;
-  font-weight: 500;
-  color: #218c7e;
-  line-height: 1.2;
-}
-
-.features-row {
-  display: flex;
-  justify-content: center;
-  gap: 48px;
-  background: #d2f7f7;
-  border-radius: 16px;
-  padding: 32px 0;
-  width: 80%;
-  margin-bottom: 32px;
-}
-.feature-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 220px;
-  background: #eafafc;
-  border-radius: 12px;
-  padding: 18px 12px;
-  box-shadow: 0 2px 8px rgba(33, 140, 126, 0.08);
-}
-.feature-icon {
-  color: #218c7e;
-  margin-bottom: 12px;
-}
-.feature-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 6px;
-  color: #218c7e;
-}
-.feature-desc {
-  font-size: 1rem;
-  color: #218c7e;
-  text-align: center;
-}
-
-.community-snapshot {
-  width: 80%;
-  background: #fff;
-  border-radius: 16px;
-  margin-bottom: 32px;
-  padding: 24px 32px;
-  box-shadow: 0 2px 8px rgba(33, 140, 126, 0.06);
-  text-align: left;
-}
-.snapshot-title {
-  font-size: 1.15rem;
-  font-weight: bold;
-  color: #218c7e;
-  margin-bottom: 8px;
-}
-.snapshot-desc {
-  color: #218c7e;
-  margin-bottom: 16px;
-}
-.snapshot-box {
-  border: 2px solid #baf3f3;
-  border-radius: 12px;
-  padding: 16px;
-  min-height: 60px;
-  background: #eafafc;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.snapshot-line {
-  height: 8px;
-  background: #baf3f3;
-  border-radius: 4px;
-  margin-bottom: 4px;
-}
-
-.footer-links {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  gap: 48px;
-  padding: 18px 0;
-  border-top: 2px solid #baf3f3;
-  background: #eafafc;
-  border-radius: 0 0 12px 12px;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-}
-.footer-links a {
-  color: #218c7e;
-  font-size: 1.1rem;
-  text-decoration: none;
-  font-weight: 500;
-  transition: text-decoration 0.2s;
-}
-.footer-links a:hover {
-  text-decoration: underline;
-}
-@media (max-width: 900px) {
-  .features-row {
-    flex-direction: column;
-    gap: 24px;
-    width: 95%;
-    padding: 24px 0;
-  }
-  .community-snapshot {
-    width: 95%;
-    padding: 18px 12px;
-  }
-}
+.wrap{ max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+.hero{ text-align:center; margin: 10px 0 24px; }
+.hero h1{ font-size: 32px; color:#115e5c; margin:0 0 6px; }
+.hero h2{ font-size: 26px; color:#1d7c7a; margin:0 0 10px; }
+.hero p{ color:#566; margin:0 auto; max-width: 640px; }
+.cards{ display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top: 20px; }
+.card{ background:#fff; border-radius:14px; padding:18px; text-align:center; box-shadow: 0 6px 20px rgba(0,0,0,.06);
+  cursor:pointer; transition: transform .18s ease, box-shadow .18s ease; }
+.card:hover{ transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.10); }
+.card .icon{ font-size: 28px; }
+.card h3{ margin: 8px 0 6px; color:#135; }
+.card p{ margin:0; color:#667; font-size: 14px; }
+.panel{ background:#fff; border-radius:14px; padding:18px; margin-top: 24px; box-shadow: 0 6px 20px rgba(0,0,0,.05);}
+.panel h3{ margin:0 0 6px; color:#135; }
+.muted{ color:#667; font-size: 14px; margin:0; }
+.sk-wrap{ margin-top:10px; display:grid; gap:8px; }
+.sk{ height:10px; border-radius:6px; background: linear-gradient(90deg,#e8f6f5,#e1ecff); }
 </style>

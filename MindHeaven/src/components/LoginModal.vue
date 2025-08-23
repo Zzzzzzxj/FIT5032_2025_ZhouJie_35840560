@@ -1,123 +1,254 @@
+<template>
+  <Dialog
+    :visible="modelValue"
+    @update:visible="close"
+    modal
+    :closable="true"
+    :draggable="false"
+    :breakpoints="{ '960px': '32rem', '640px': '90vw' }"
+    :style="{ width: '32rem' }"
+    dismissableMask
+  >
+    <template #header>
+      <div class="hdr">
+        <div class="hdr__title">Sign in to continue</div>
+        <div class="hdr__sub">Use your university or personal email.</div>
+      </div>
+    </template>
+
+    <div class="wrap">
+      <!-- 错误提示 -->
+      <Message v-if="errorMsg" severity="error" :closable="false" class="mb-3" aria-live="polite">
+        {{ errorMsg }}
+      </Message>
+
+      <form class="form" @submit.prevent="onSubmit">
+        <div class="field">
+          <label for="email" class="lbl">Email</label>
+          <span class="p-input-icon-left wfull">
+            <i class="pi pi-envelope" />
+            <InputText
+              id="email"
+              v-model.trim="email"
+              type="email"
+              class="wfull"
+              autocomplete="email"
+              placeholder="you@example.com"
+              :invalid="touched && !emailOK"
+              @blur="touched = true"
+              required
+            />
+          </span>
+          <small v-if="touched && !emailOK" class="err">Please enter a valid email.</small>
+        </div>
+
+        <div class="field">
+          <label for="password" class="lbl">Password</label>
+          <span class="p-input-icon-left wfull">
+            <i class="pi pi-lock" />
+            <InputText
+              :type="showPwd ? 'text' : 'password'"
+              id="password"
+              v-model.trim="password"
+              class="wfull"
+              autocomplete="current-password"
+              placeholder="Enter password"
+              :invalid="touched && !pwdOK"
+              @blur="touched = true"
+              required
+            />
+          </span>
+          <div class="row">
+            <Checkbox v-model="showPwd" :binary="true" inputId="showpwd" />
+            <label for="showpwd">Show password</label>
+          </div>
+          <small v-if="touched && !pwdOK" class="err">Password must be at least 6 characters.</small>
+        </div>
+
+        <div class="row">
+          <Checkbox v-model="createMode" :binary="true" inputId="create" />
+          <label for="create">Create a new account</label>
+        </div>
+
+        <Button
+          type="submit"
+          :label="createMode ? 'Create account' : 'Sign in'"
+          class="btn-primary wfull"
+          :loading="loading"
+          icon="pi pi-check"
+        />
+      </form>
+
+      <div class="divider">
+        <span>or</span>
+      </div>
+
+      <Button
+        class="btn-google wfull"
+        icon="pi pi-google"
+        label="Continue with Google"
+        @click="onGoogle"
+        :loading="loadingGoogle"
+      />
+
+      <div class="guest">
+        <Button link label="Continue as guest" @click="onGuest" />
+      </div>
+
+      <p class="disclaimer">
+        This app provides self-help tools and general information about mental wellbeing.
+        It does not replace professional diagnosis or treatment. In emergencies,
+        contact local emergency services.
+      </p>
+    </div>
+  </Dialog>
+</template>
+
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { store } from '../store.js'
+import { computed, ref } from 'vue'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Checkbox from 'primevue/checkbox'
+import Button from 'primevue/button'
+import Message from 'primevue/message'
 
+// 这里使用你现有的 Firebase 方法名（如与你的文件不一致，把名字改成你当前 firebase.js 导出的即可）
+import {
+  emailSignIn,
+  emailSignUp,
+  googleSignIn,
+} from '@/firebase.js'
+import { store } from '@/store'
 const props = defineProps({
-  mode: { type: String, default: 'login' }
+  modelValue: { type: Boolean, default: false }
 })
-const emit = defineEmits(['close-modal'])
+const emit = defineEmits(['update:modelValue'])
 
-// Local state for the modal
-const isRegistering = ref(props.mode === 'signup')
-const loginError = ref('')
-const loginForm = ref({
-  username: '',
-  password: '',
-  confirmPassword: '',
-  role: 'user'
-})
+const email = ref('')
+const password = ref('')
+const createMode = ref(false)
+const showPwd = ref(false)
+const touched = ref(false)
 
-// Watch for changes in the mode prop
-watch(() => props.mode, (val) => {
-  isRegistering.value = val === 'signup'
-})
+const loading = ref(false)
+const loadingGoogle = ref(false)
+const errorMsg = ref('')
 
-// Validation for the form
-const isValidLoginForm = computed(() => {
-  const form = loginForm.value
-  if (form.username.length < 3 || form.username.length > 20) return false
-  if (form.password.length < 6) return false
-  if (isRegistering.value && form.password !== form.confirmPassword) return false
-  return true
-})
+const emailOK = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value))
+const pwdOK = computed(() => (password.value || '').length >= 6)
 
-// Function to handle user login
-function handleLogin() {
-  const user = store.users.find(
-    u => u.username === loginForm.value.username && u.password === loginForm.value.password
-  )
-  if (user) {
-    store.login(user) 
-    emit('close-modal')
-  } else {
-    loginError.value = 'Invalid username or password.'
-  }
+function close(v) {
+  emit('update:modelValue', v)
+}
+function reset() {
+  email.value = ''
+  password.value = ''
+  createMode.value = false
+  showPwd.value = false
+  touched.value = false
+  errorMsg.value = ''
 }
 
-// Function to handle new user registration
-function handleRegister() {
-  if (!isValidLoginForm.value) return
-  const existingUser = store.users.find(u => u.username === loginForm.value.username)
-  if (existingUser) {
-    loginError.value = 'This username is already taken.'
-    return
-  }
+async function onSubmit() {
+  touched.value = true
+  errorMsg.value = ''
+  if (!emailOK.value || !pwdOK.value) return
 
-  const newUser = {
-    id: Date.now(),
-    username: loginForm.value.username,
-    password: loginForm.value.password,
-    role: loginForm.value.role
-  }
-
-  store.users.push(newUser)
-  store.login(newUser) // Log in the new user immediately
-  emit('close-modal')
-}
-
-// Function to handle form submission
-function handleSubmit() {
-    loginError.value = '';
-    if (isRegistering.value) {
-        handleRegister();
+  loading.value = true
+  try {
+    if (createMode.value) {
+      await emailSignUp(email.value, password.value)
     } else {
-        handleLogin();
+      await emailSignIn(email.value, password.value)
     }
+    reset()
+    close(false)
+  } catch (e) {
+    errorMsg.value = toMsg(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function onGoogle() {
+  errorMsg.value = ''
+  loadingGoogle.value = true
+  try {
+    await googleSignIn()
+    reset()
+    close(false)
+  } catch (e) {
+    errorMsg.value = toMsg(e)
+  } finally {
+    loadingGoogle.value = false
+  }
+}
+
+async function onGuest() {
+  errorMsg.value = ''
+  loading.value = true
+  try {
+    // 不走 Firebase，直接设成本地游客
+    store.isLoggedIn.value = true
+    store.currentUser.value = { uid: 'guest', displayName: 'Guest' }
+    store.currentRole.value = 'guest'
+    reset()
+    close(false)
+  } catch (e) {
+    errorMsg.value = toMsg(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+
+function toMsg(e) {
+  const txt = String(e?.message || e || '')
+  // 更友好的错误文案
+  if (/invalid-credential|wrong-password|user-not-found/i.test(txt)) return 'Email or password is incorrect.'
+  if (/email-already-in-use/i.test(txt)) return 'This email is already in use.'
+  if (/popup-closed|cancelled/i.test(txt)) return 'The sign-in popup was closed.'
+  if (/network-request-failed/i.test(txt)) return 'Network error. Please try again.'
+  return txt.replace(/^Firebase:\s*/i, '')
 }
 </script>
 
-<template>
-  <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);" @click.self="emit('close-modal')">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header border-0">
-          <h5 class="modal-title">{{ isRegistering ? 'Create Account' : 'Login' }}</h5>
-          <button type="button" class="btn-close" @click="emit('close-modal')"></button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="handleSubmit">
-            <div class="mb-3">
-              <label class="form-label">Username</label>
-              <input type="text" class="form-control" v-model="loginForm.username" required minlength="3" maxlength="20" />
-              <div class="form-text" v-if="loginForm.username.length < 3">Must be 3-20 characters.</div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Password</label>
-              <input type="password" class="form-control" v-model="loginForm.password" required minlength="6" />
-               <div class="form-text" v-if="loginForm.password.length < 6">Must be at least 6 characters.</div>
-            </div>
-            <div class="mb-3" v-if="isRegistering">
-              <label class="form-label">Confirm Password</label>
-              <input type="password" class="form-control" v-model="loginForm.confirmPassword" required />
-              <div
-                class="form-text text-danger"
-                v-if="loginForm.password !== loginForm.confirmPassword && loginForm.confirmPassword"
-              >
-                Passwords do not match.
-              </div>
-            </div>
-            <div class="alert alert-danger" v-if="loginError">{{ loginError }}</div>
-            <button type="submit" class="btn btn-primary w-100" :disabled="!isValidLoginForm">
-              {{ isRegistering ? 'Register' : 'Login' }}
-            </button>
-          </form>
-          <div class="text-center mt-3">
-            <a href="#" @click.prevent="isRegistering = !isRegistering" class="text-decoration-none">
-              {{ isRegistering ? 'Already have an account? Login' : "Don't have an account? Register" }}
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+<style scoped>
+/* Header */
+.hdr { display:flex; flex-direction:column; gap:2px; }
+.hdr__title { font-weight:700; font-size:18px; color:#123; }
+.hdr__sub { font-size:12px; color:#6b7280; }
+
+/* Layout */
+.wrap { display:flex; flex-direction:column; gap:12px; }
+.form { display:flex; flex-direction:column; gap:12px; }
+.field { display:flex; flex-direction:column; gap:6px; }
+.lbl { font-size:13px; color:#334155; }
+.row { display:flex; align-items:center; gap:8px; }
+
+/* Buttons */
+.btn-primary { background:#10b981; border:0; }
+.btn-primary:hover { filter: brightness(0.95); }
+
+.btn-google {
+  background:#fff; color:#374151; border:1px solid #e5e7eb;
+}
+.btn-google:hover { background:#f8fafc; }
+
+/* Divider */
+.divider {
+  display:flex; align-items:center; gap:10px; color:#94a3b8; font-size:12px; user-select:none;
+}
+.divider::before, .divider::after {
+  content:''; height:1px; flex:1; background: #e5e7eb;
+}
+
+/* Helpers */
+.wfull { width:100%; }
+.mb-3 { margin-bottom:.75rem; }
+.err { color:#dc2626; font-size:12px; }
+
+/* Footer */
+.guest { text-align:center; margin-top:4px; }
+.disclaimer { color:#6b7280; font-size:12px; line-height:1.45; margin: 6px 0 0; }
+</style>

@@ -9,23 +9,23 @@ import {
   signInWithPopup,
   signOut
 } from 'firebase/auth'
+console.log('API KEY =>', import.meta.env.VITE_FIREBASE_API_KEY)
 
-// ✅ 建议把密钥放到 .env 文件中（Vite 变量必须以 VITE_ 开头）
+// 用 .env（Vite 变量必须 VITE_ 前缀）
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  // 可选：storageBucket、messagingSenderId ...
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 }
 
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 
-// —— 常用封装 ——
+// —— 按名导出你在 LoginModal.vue 用到的函数 ——
 
-// 监听登录状态变化（在 App.vue 中调用一次即可）
-export const listenAuth = (callback) => onAuthStateChanged(auth, callback)
+// 监听登录态（在 App.vue 里用）
+export const listenAuth = (cb) => onAuthStateChanged(auth, cb)
 
 // 邮箱登录 / 注册
 export const emailSignIn = (email, password) =>
@@ -34,7 +34,7 @@ export const emailSignIn = (email, password) =>
 export const emailSignUp = (email, password) =>
   createUserWithEmailAndPassword(auth, email, password)
 
-// Google 登录（可选）
+// Google 登录
 export const googleSignIn = () =>
   signInWithPopup(auth, new GoogleAuthProvider())
 

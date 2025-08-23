@@ -1,178 +1,278 @@
+<template>
+  <section class="wrap">
+    <header class="head">
+      <h1>Mood Tracker</h1>
+      <div class="head__actions">
+        <Button icon="pi pi-file-pdf" label="Export PDF" @click="onExportPdf" />
+      </div>
+    </header>
+    <p class="muted">
+      Track your daily mood (1–10), jot notes and triggers. In sustained low mood (e.g., ≤ 3), consider contacting professional support.
+    </p>
+
+    <!-- 表单 -->
+    <Card class="card-panel">
+      <template #title>New Entry</template>
+      <template #content>
+        <div class="grid2">
+          <div>
+            <label class="lbl">Date</label>
+            <Calendar v-model="entry.date" dateFormat="yy-mm-dd" showIcon class="wfull" />
+          </div>
+          <div>
+            <label class="lbl">Mood (1-10)</label>
+            <InputText v-model.number="entry.mood" type="number" min="1" max="10" class="wfull" />
+          </div>
+          <div class="span2">
+            <label class="lbl">Notes</label>
+            <Textarea v-model="entry.notes" rows="3" class="wfull" autoResize placeholder="What influenced your mood today?" />
+          </div>
+          <div class="span2">
+            <label class="lbl">Triggers (comma separated)</label>
+            <InputText v-model="entry.triggersRaw" placeholder="sleep, workload, exercise" class="wfull" />
+          </div>
+        </div>
+        <div class="right">
+          <Button label="Clear" severity="secondary" @click="resetEntry" />
+          <Button label="Save" icon="pi pi-check" @click="saveEntry" />
+        </div>
+      </template>
+    </Card>
+
+    <Message v-if="lowStreak >= 3" severity="warn" :closable="false" class="warn">
+      We noticed several low-mood days in a row. Consider your self-care plan and reaching out to support resources.
+    </Message>
+
+    <!-- 我的记录 -->
+    <Card class="card-panel">
+      <template #title>My Entries</template>
+      <template #content>
+        <div class="filters">
+          <div class="fcol">
+            <label class="lbl">Global search</label>
+            <InputText v-model="globalFilter" placeholder="Search notes / triggers…" class="wfull" />
+          </div>
+          <div class="fcol w220">
+            <label class="lbl">Range</label>
+            <Dropdown v-model="rangeDays" :options="rangeOptions" optionLabel="label" optionValue="value" class="wfull" />
+          </div>
+        </div>
+
+        <DataTable
+          :value="filteredEntries"
+          paginator
+          :rows="10"
+          sortMode="multiple"
+          :filters="filters"
+          filterDisplay="row"
+          :globalFilterFields="['dateStr','moodStr','notes','triggersStr']"
+          responsiveLayout="scroll"
+          class="datatable"
+        >
+          <Column field="dateStr" header="Date" sortable style="min-width:9rem" />
+          <Column field="mood" header="Mood" sortable style="min-width:6rem">
+            <template #body="{ data }">
+              <Tag :value="data.mood" :severity="moodColor(data.mood)" />
+            </template>
+          </Column>
+          <Column field="notes" header="Notes" filter style="min-width:14rem" />
+          <Column field="triggersStr" header="Triggers" filter style="min-width:12rem" />
+          <Column header="Actions" :exportable="false" style="min-width:8rem">
+            <template #body="{ data }">
+              <div class="row-actions">
+                <Button icon="pi pi-trash" rounded text severity="danger" @click="removeEntry(data)" />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </template>
+    </Card>
+
+    <!-- 摘要 -->
+    <div class="summary">
+      <div class="sum-card"><div class="sum-title">Period</div><div class="sum-val">{{ rangeLabel }}</div></div>
+      <div class="sum-card"><div class="sum-title">Average</div><div class="sum-val">{{ stats.avg ?? '-' }}</div></div>
+      <div class="sum-card"><div class="sum-title">Min</div><div class="sum-val">{{ stats.min ?? '-' }}</div></div>
+      <div class="sum-card"><div class="sum-title">Max</div><div class="sum-val">{{ stats.max ?? '-' }}</div></div>
+    </div>
+    <p class="muted tiny">This summary is for self-reflection only and is not medical advice.</p>
+  </section>
+</template>
+
 <script setup>
-import Navbar from '../components/Navbar.vue'
-import { ref, computed, onMounted } from 'vue';
-import { store } from '../store.js';
+import { computed, reactive, ref, watch } from 'vue'
+import { store } from '@/store'
+import { useToast } from 'primevue/usetoast'
+import { exportMoodSummaryPdf } from '@/utils/exportPdf'
+import Card from 'primevue/card'
+import Textarea from 'primevue/textarea'
+import Message from 'primevue/message'
+import Tag from 'primevue/tag'
+import { runValidators, required, intRange, maxLen } from '@/utils/validators'
+import { sanitizeText } from '@/utils/sanitize'
 
-const emit = defineEmits(['signup', 'login'])
+const toast = useToast()
 
-onMounted(() => {
-  if (!store.isLoggedIn) {
-    store.navigate('login')
+// 表单
+const entry = reactive({ date: new Date(), mood: 7, notes: '', triggersRaw: '' })
+function resetEntry() {
+  entry.date = new Date()
+  entry.mood = 7
+  entry.notes = ''
+  entry.triggersRaw = ''
+}
+
+// —— 保存（唯一版本，包含校验 + 安全）——
+function saveEntry() {
+  if (!store.isLoggedIn.value) {
+    toast.add({
+      severity: 'info',
+      summary: 'Sign in required',
+      detail: 'Guest mode is read-only.',
+      life: 2200
+    })
+    return
   }
+
+  // 校验：情绪 1–10，备注最长 500
+  const errMood = runValidators(entry.mood, [required, intRange(1, 10)])
+  const errNotes = runValidators(entry.notes, [maxLen(500)])
+  if (errMood !== true) {
+    return toast.add({ severity: 'warn', summary: 'Mood', detail: errMood, life: 2200 })
+  }
+  if (errNotes !== true) {
+    return toast.add({ severity: 'warn', summary: 'Notes', detail: errNotes, life: 2200 })
+  }
+
+  // 安全：去除潜在 XSS
+  const cleanNotes = sanitizeText(entry.notes)
+  const cleanTriggers = (entry.triggersRaw || '')
+    .split(',')
+    .map(s => sanitizeText(s))
+    .filter(Boolean)
+
+  const ts = entry.date ? new Date(entry.date).getTime() : Date.now()
+  const row = {
+    id: 'm_' + ts,
+    userId: store.currentUser.value?.uid,
+    date: ts,
+    mood: Math.max(1, Math.min(10, Number(entry.mood))),
+    notes: cleanNotes,
+    triggers: cleanTriggers
+  }
+
+  store.moodEntries.value = [row, ...(store.moodEntries.value || [])]
+  toast.add({ severity: 'success', summary: 'Saved', life: 1600 })
+  resetEntry()
+}
+
+// 低分连续天数（最近 7 天）
+const lowStreak = computed(() => {
+  const list = (store.moodEntries.value || []).slice().sort((a, b) => b.date - a.date)
+  let s = 0
+  for (const r of list) {
+    const diff = (Date.now() - r.date) / 86400000
+    if (diff > 7) break
+    if (r.mood <= 3) s++
+    else break
+  }
+  return s
 })
 
-// Local state for the form
-const newMoodEntry = ref({
-  mood: 5,
-  notes: ''
-});
+// 全局过滤 / 范围
+const globalFilter = ref('')
+const filters = ref({
+  global: { value: null, matchMode: 'contains' },
+  notes: { value: null, matchMode: 'contains' },
+  triggersStr: { value: null, matchMode: 'contains' }
+})
+watch(globalFilter, v => { filters.value.global.value = v || null })
 
-// Computed property to get mood entries for the current user
-const userMoodEntries = computed(() => {
-  if (!store.currentUser) return [];
-  // Filter global entries and sort by date
-  return store.moodEntries
-    .filter(entry => entry.userId === store.currentUser.id)
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-});
+const rangeOptions = [
+  { label: 'Last 7 days', value: 7 },
+  { label: 'Last 30 days', value: 30 },
+  { label: 'Last 90 days', value: 90 }
+]
+const rangeDays = ref(30)
+const rangeLabel = computed(() => rangeOptions.find(o => o.value === rangeDays.value)?.label || 'Custom')
 
-const recentMoodEntries = computed(() => {
-  return userMoodEntries.value.slice(-7);
-});
+// 过滤后的记录
+const filteredEntries = computed(() => {
+  const uid = store.currentUser.value?.uid
+  const cutoff = Date.now() - rangeDays.value * 86400000
+  return (store.moodEntries.value || [])
+    .filter(r => (uid ? r.userId === uid : false))
+    .filter(r => r.date >= cutoff)
+    .map(r => ({
+      ...r,
+      dateStr: new Date(r.date).toISOString().slice(0, 10),
+      moodStr: String(r.mood),
+      triggersStr: (r.triggers || []).join(', ')
+    }))
+    .sort((a, b) => b.date - a.date)
+})
 
-const averageMood = computed(() => {
-  if (userMoodEntries.value.length === 0) return 0;
-  const sum = userMoodEntries.value.reduce((acc, entry) => acc + parseInt(entry.mood, 10), 0);
-  return sum / userMoodEntries.value.length;
-});
-
-// Validation
-const isValidMoodEntry = computed(() => {
-  return newMoodEntry.value.notes.length <= 500;
-});
-
-function getMoodBadgeClass(mood) {
-  if (mood >= 8) return 'bg-success';
-  if (mood >= 6) return 'bg-warning';
-  if (mood >= 4) return 'bg-info';
-  return 'bg-danger';
+// 颜色与删除
+function moodColor(m) {
+  if (m >= 8) return 'success'
+  if (m <= 3) return 'danger'
+  if (m <= 5) return 'warn'
+  return 'info'
+}
+function removeEntry(row) {
+  store.moodEntries.value = (store.moodEntries.value || []).filter(r => r.id !== row.id)
+  toast.add({ severity: 'info', summary: 'Deleted', life: 1400 })
 }
 
-function getMoodDescription(mood) {
-  if (mood >= 8) return 'Feeling Great';
-  if (mood >= 6) return 'Feeling Good';
-  if (mood >= 4) return 'Feeling Okay';
-  return 'Feeling Down';
-}
+// 统计
+const stats = computed(() => {
+  const arr = filteredEntries.value.map(r => r.mood)
+  if (!arr.length) return { avg: null, min: null, max: null }
+  const avg = Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10
+  return { avg, min: Math.min(...arr), max: Math.max(...arr) }
+})
 
-function addMoodEntry() {
-  if (!isValidMoodEntry.value) return;
-  const entry = {
-    id: Date.now(),
-    mood: newMoodEntry.value.mood,
-    notes: newMoodEntry.value.notes,
-    date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
-    userId: store.currentUser.id
-  };
-  store.moodEntries.push(entry);
-  store.showAlert('Mood entry saved!', 'success');
-  // Reset form
-  newMoodEntry.value = { mood: 5, notes: '' };
+// PDF 导出
+function onExportPdf() {
+  exportMoodSummaryPdf(
+    {
+      title: 'Mood Summary',
+      period: rangeLabel.value,
+      avg: stats.value.avg,
+      min: stats.value.min,
+      max: stats.value.max,
+      notes: 'This summary is for self-reflection only and is not medical advice.'
+    },
+    `mood_summary_${new Date().toISOString().slice(0, 10)}.pdf`
+  )
 }
 </script>
 
-<template>
-  <div class="mood-root">
-    <Navbar @signup="emit('signup')" @login="emit('login')" />
-    <div class="container">
-      <div class="row">
-        <div class="col-lg-8 mb-4">
-          <div class="card">
-            <div class="card-header">
-              <h4><i class="fas fa-chart-line me-2"></i>Today's Mood Entry</h4>
-            </div>
-            <div class="card-body">
-              <form @submit.prevent="addMoodEntry">
-                <div class="mb-4">
-                  <label class="form-label fw-bold">How are you feeling today? (1-10)</label>
-                  <input type="range" class="mood-slider" v-model.number="newMoodEntry.mood" min="1" max="10" />
-                  <div class="d-flex justify-content-between mt-2">
-                    <small class="text-muted">Very Down</small>
-                    <span class="text-primary fw-bold fs-5">{{ newMoodEntry.mood }}</span>
-                    <small class="text-muted">Very Good</small>
-                  </div>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label fw-bold">Notes for today (optional)</label>
-                  <textarea
-                    class="form-control"
-                    v-model="newMoodEntry.notes"
-                    rows="3"
-                    placeholder="Describe what happened or how you feel..."
-                  ></textarea>
-                  <div class="form-text" :class="{ 'text-danger': !isValidMoodEntry }">
-                    {{ newMoodEntry.notes.length }}/500 characters
-                  </div>
-                </div>
-                <button type="submit" class="btn btn-primary" :disabled="!isValidMoodEntry">
-                  <i class="fas fa-save me-2"></i>Save Entry
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-lg-4 mb-4">
-          <div class="card">
-            <div class="card-header">
-              <h5><i class="fas fa-chart-bar me-2"></i>7-Day Mood Trend</h5>
-            </div>
-            <div class="card-body">
-              <div class="mood-chart">
-                <div v-for="(entry, index) in recentMoodEntries" :key="index"
-                     class="mood-bar"
-                     :style="{ height: entry.mood * 25 + 'px' }"
-                     :title="`${entry.date}: ${entry.mood}/10`">
-                </div>
-              </div>
-              <div class="mt-3 text-center">
-                <small class="text-muted">7-Day Average: {{ averageMood.toFixed(1) }}/10</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="row mt-2">
-        <div class="col-12">
-          <div class="card">
-            <div class="card-header d-flex justify-content-between">
-              <h5><i class="fas fa-history me-2"></i>Mood History</h5>
-              <small class="text-muted">{{ userMoodEntries.length }} entries total</small>
-            </div>
-            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-              <div v-if="userMoodEntries.length === 0" class="text-center text-muted py-4">
-                <p>No mood entries yet. Start by adding one today!</p>
-              </div>
-              <div v-else>
-                <div v-for="entry in [...userMoodEntries].reverse()" :key="entry.id" class="border-bottom py-3">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h6 class="mb-1">{{ entry.date }}</h6>
-                      <div class="d-flex align-items-center mb-2">
-                        <span class="badge" :class="getMoodBadgeClass(entry.mood)">Mood: {{ entry.mood }}/10</span>
-                        <span class="ms-3 text-muted">{{ getMoodDescription(entry.mood) }}</span>
-                      </div>
-                      <p v-if="entry.notes" class="text-muted mb-0">{{ entry.notes }}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <style scoped>
-.mood-root {
-  background: #eafafc;
-  min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.wrap{ max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+.head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.head h1{ margin:0; color:#135; font-size: 24px; }
+.head__actions{ display:flex; gap:8px; flex-wrap: wrap; }
+.muted{ color:#667; margin: 6px 0 14px; }
+.tiny{ font-size: 12px; }
+.card-panel{ box-shadow:0 6px 20px rgba(0,0,0,.06); border-radius:14px; }
+.grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+.span2{ grid-column: span 2; }
+.lbl{ display:block; font-size:13px; color:#345; margin-bottom:4px; }
+.wfull{ width:100%; }
+.right{ display:flex; justify-content:flex-end; gap:8px; margin-top: 10px; }
+.warn{ box-shadow:0 4px 14px rgba(255,170,0,.15); border-radius:14px; }
+.filters{ display:grid; grid-template-columns: 1fr 220px; gap:12px; margin-bottom:10px; }
+.w220{ width:220px; }
+.datatable{ font-size: 14px; }
+.row-actions{ display:flex; gap:6px; }
+.summary{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-top: 14px; }
+.sum-card{ background:#fff; border-radius:12px; padding:12px 14px; box-shadow:0 4px 16px rgba(0,0,0,.06); text-align:center; }
+.sum-title{ color:#456; font-size:13px; }
+.sum-val{ color:#123; font-weight:700; font-size:18px; margin-top:4px; }
+@media (max-width: 760px){
+  .grid2{ grid-template-columns:1fr; } .span2{ grid-column:1; }
+  .filters{ grid-template-columns:1fr; } .w220{ width:auto; }
+  .summary{ grid-template-columns:1fr 1fr; }
 }
 </style>
