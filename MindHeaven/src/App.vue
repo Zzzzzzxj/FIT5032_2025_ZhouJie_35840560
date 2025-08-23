@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import { store } from './store.js'
 
+import { onMounted } from 'vue'
+import { listenAuth } from './firebase.js'
+import { store } from './store'
 // Import Views
 import HomeView from './views/HomeView.vue'
 import MoodTrackerView from './views/MoodTrackerView.vue'
@@ -19,6 +22,27 @@ function openSignupModal() {
   loginPageMode.value = 'signup'
   store.navigate('login')
 }
+
+
+
+onMounted(() => {
+  listenAuth((user) => {
+    if (user) {
+      store.isLoggedIn.value = true
+      store.currentUser.value = {
+        uid: user.uid,
+        displayName: user.displayName || 'User'
+
+      }
+
+    } else {
+      store.isLoggedIn.value = false
+      store.currentUser.value = null
+    }
+  })
+})
+
+
 </script>
 
 <template>

@@ -8,6 +8,29 @@
   --dark-text: #2d3436;
 }
 
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px; height: 1px;
+  overflow: hidden;
+}
+.skip-link:focus {
+  position: absolute;
+  left: 1rem; top: 1rem;
+  width: auto; height: auto;
+  padding: .5rem .75rem;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: .5rem;
+  z-index: 1000;
+}
+
+.reduce-motion * {
+  transition: none !important;
+  animation: none !important;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
