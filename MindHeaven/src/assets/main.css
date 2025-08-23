@@ -238,3 +238,36 @@ main {
   }
   .hero-section { padding: 72px 0; }
 }
+/* 页面主标题样式（h1 通用） */
+h1, .page-title {
+  color: #ffffff !important;
+  font-weight: 700;
+  text-shadow: 0 3px 6px rgba(0,0,0,0.6); /* 阴影提升对比度 */
+}
+
+/* 页面副标题（h2 通用） */
+h2, .page-subtitle {
+  color: #e0f7fa !important;
+  font-weight: 600;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* 次要提示文字（描述性文字、muted 类） */
+.muted, .page-desc, p, span.muted {
+  color: #f5f5f5 !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.45);
+}
+
+/* Community / Resources / MoodTracker 标题区域统一样式 */
+.section-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.section-header h1 {
+  color: #fff !important;
+  text-shadow: 0 3px 6px rgba(0,0,0,0.6);
+}
+.section-header p {
+  color: #f5f5f5 !important;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
