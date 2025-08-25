@@ -1,6 +1,6 @@
 // functions/api/email.js
 // Cloudflare Pages Function: POST /api/email
-// 不用 Resend SDK，直接 HTTP 调用，避免 @react-email/render 打包报错
+// 纯 fetch 调用 Resend，避免打包 @react-email/render
 
 export const onRequestPost = async ({ request, env }) => {
   try {
@@ -14,7 +14,6 @@ export const onRequestPost = async ({ request, env }) => {
       return json({ ok: false, error: 'Missing to/subject/html' }, 400)
     }
 
-    // Resend HTTP API
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -22,36 +21,29 @@ export const onRequestPost = async ({ request, env }) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: FROM_EMAIL,                         // e.g. 'MindHaven <noreply@your-domain.com>'
+        from: FROM_EMAIL,                       // e.g. "MindHaven <onboarding@resend.dev>"
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
-        // 附件：[{ filename, content (base64) }]
         attachments: (attachments || []).map(a => ({
           filename: a.filename,
-          content: a.content
+          content: a.content                    // base64
         }))
       })
     })
 
-    // Resend API 返回 JSON（含 id/错误等）
     const data = await resp.json().catch(() => ({}))
     if (!resp.ok) {
       return json({ ok: false, error: data?.message || `Resend ${resp.status}` }, resp.status)
     }
-    return json({ ok: true, id: data?.id || null }, 200)
+    return json({ ok: true, id: data?.id || null })
   } catch (e) {
     return json({ ok: false, error: e?.message || 'Unknown error' }, 500)
   }
 }
 
-// ---------- helpers ----------
-async function safeJson(req) {
-  try { return await req.json() } catch { return {} }
-}
+// helpers
+async function safeJson(req) { try { return await req.json() } catch { return {} } }
 function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  })
+  return new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } })
 }

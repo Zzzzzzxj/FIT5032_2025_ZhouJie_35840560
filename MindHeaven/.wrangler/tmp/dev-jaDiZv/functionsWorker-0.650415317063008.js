@@ -22,14 +22,14 @@ var onRequestPost = /* @__PURE__ */ __name2(async ({ request, env }) => {
       },
       body: JSON.stringify({
         from: FROM_EMAIL,
-        // e.g. 'MindHaven <noreply@your-domain.com>'
+        // e.g. "MindHaven <onboarding@resend.dev>"
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
-        // 附件：[{ filename, content (base64) }]
         attachments: (attachments || []).map((a) => ({
           filename: a.filename,
           content: a.content
+          // base64
         }))
       })
     });
@@ -37,7 +37,7 @@ var onRequestPost = /* @__PURE__ */ __name2(async ({ request, env }) => {
     if (!resp.ok) {
       return json({ ok: false, error: data?.message || `Resend ${resp.status}` }, resp.status);
     }
-    return json({ ok: true, id: data?.id || null }, 200);
+    return json({ ok: true, id: data?.id || null });
   } catch (e) {
     return json({ ok: false, error: e?.message || "Unknown error" }, 500);
   }
@@ -52,13 +52,19 @@ async function safeJson(req) {
 __name(safeJson, "safeJson");
 __name2(safeJson, "safeJson");
 function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
+  return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
 }
 __name(json, "json");
 __name2(json, "json");
+function onRequestGet() {
+  return new Response(JSON.stringify({
+    ok: true,
+    route: "/api/health",
+    ts: (/* @__PURE__ */ new Date()).toISOString()
+  }), { headers: { "Content-Type": "application/json" } });
+}
+__name(onRequestGet, "onRequestGet");
+__name2(onRequestGet, "onRequestGet");
 var routes = [
   {
     routePath: "/api/email",
@@ -66,6 +72,13 @@ var routes = [
     method: "POST",
     middlewares: [],
     modules: [onRequestPost]
+  },
+  {
+    routePath: "/api/health",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet]
   }
 ];
 function lexer(str) {

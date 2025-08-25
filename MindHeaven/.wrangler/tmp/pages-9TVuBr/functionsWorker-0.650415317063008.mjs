@@ -20,14 +20,14 @@ var onRequestPost = /* @__PURE__ */ __name(async ({ request, env }) => {
       },
       body: JSON.stringify({
         from: FROM_EMAIL,
-        // e.g. 'MindHaven <noreply@your-domain.com>'
+        // e.g. "MindHaven <onboarding@resend.dev>"
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
-        // 附件：[{ filename, content (base64) }]
         attachments: (attachments || []).map((a) => ({
           filename: a.filename,
           content: a.content
+          // base64
         }))
       })
     });
@@ -35,7 +35,7 @@ var onRequestPost = /* @__PURE__ */ __name(async ({ request, env }) => {
     if (!resp.ok) {
       return json({ ok: false, error: data?.message || `Resend ${resp.status}` }, resp.status);
     }
-    return json({ ok: true, id: data?.id || null }, 200);
+    return json({ ok: true, id: data?.id || null });
   } catch (e) {
     return json({ ok: false, error: e?.message || "Unknown error" }, 500);
   }
@@ -49,12 +49,19 @@ async function safeJson(req) {
 }
 __name(safeJson, "safeJson");
 function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
+  return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
 }
 __name(json, "json");
+
+// api/health.js
+function onRequestGet() {
+  return new Response(JSON.stringify({
+    ok: true,
+    route: "/api/health",
+    ts: (/* @__PURE__ */ new Date()).toISOString()
+  }), { headers: { "Content-Type": "application/json" } });
+}
+__name(onRequestGet, "onRequestGet");
 
 // ../.wrangler/tmp/pages-9TVuBr/functionsRoutes-0.3334996669993304.mjs
 var routes = [
@@ -64,6 +71,13 @@ var routes = [
     method: "POST",
     middlewares: [],
     modules: [onRequestPost]
+  },
+  {
+    routePath: "/api/health",
+    mountPath: "/api",
+    method: "GET",
+    middlewares: [],
+    modules: [onRequestGet]
   }
 ];
 
@@ -554,7 +568,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// ../.wrangler/tmp/bundle-jNdP13/middleware-insertion-facade.js
+// ../.wrangler/tmp/bundle-cPzlgy/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -586,7 +600,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// ../.wrangler/tmp/bundle-jNdP13/middleware-loader.entry.ts
+// ../.wrangler/tmp/bundle-cPzlgy/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
