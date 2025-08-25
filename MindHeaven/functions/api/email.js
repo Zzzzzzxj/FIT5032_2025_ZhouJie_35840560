@@ -1,46 +1,57 @@
-// functions/email.js
+// functions/api/email.js
 // Cloudflare Pages Function: POST /api/email
-// 依赖：npm i resend
-import { Resend } from 'resend'
+// 不用 Resend SDK，直接 HTTP 调用，避免 @react-email/render 打包报错
 
-export const onRequestPost = async (ctx) => {
+export const onRequestPost = async ({ request, env }) => {
   try {
-    const { RESEND_API_KEY, FROM_EMAIL } = ctx.env || {}
+    const { RESEND_API_KEY, FROM_EMAIL } = env || {}
     if (!RESEND_API_KEY || !FROM_EMAIL) {
-      return new Response(JSON.stringify({ ok: false, error: 'Missing RESEND_API_KEY or FROM_EMAIL' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      })
+      return json({ ok: false, error: 'Missing RESEND_API_KEY or FROM_EMAIL' }, 500)
     }
 
-    const { to, subject, html, attachments } = await ctx.request.json()
-
+    const { to, subject, html, attachments } = await safeJson(request)
     if (!to || !subject || !html) {
-      return new Response(JSON.stringify({ ok: false, error: 'Missing to/subject/html' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      })
+      return json({ ok: false, error: 'Missing to/subject/html' }, 400)
     }
 
-    const resend = new Resend(RESEND_API_KEY)
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,                          // 例如：'MindHaven <noreply@your-domain.com>'
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
-      attachments: (attachments || []).map(a => ({
-        filename: a.filename,
-        content: a.content                       // base64 字符串
-      }))
+    // Resend HTTP API
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,                         // e.g. 'MindHaven <noreply@your-domain.com>'
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html,
+        // 附件：[{ filename, content (base64) }]
+        attachments: (attachments || []).map(a => ({
+          filename: a.filename,
+          content: a.content
+        }))
+      })
     })
 
-    return new Response(JSON.stringify({ ok: true, id: result?.data?.id ?? null }), {
-      headers: { 'Content-Type': 'application/json' }
-    })
+    // Resend API 返回 JSON（含 id/错误等）
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      return json({ ok: false, error: data?.message || `Resend ${resp.status}` }, resp.status)
+    }
+    return json({ ok: true, id: data?.id || null }, 200)
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e?.message || 'Unknown error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    })
+    return json({ ok: false, error: e?.message || 'Unknown error' }, 500)
   }
+}
+
+// ---------- helpers ----------
+async function safeJson(req) {
+  try { return await req.json() } catch { return {} }
+}
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  })
 }

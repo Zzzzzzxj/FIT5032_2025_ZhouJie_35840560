@@ -14,4 +14,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/api': 'http://127.0.0.1:8788' // 这里填 wrangler 输出的本地地址
+    }
+  }
 })
