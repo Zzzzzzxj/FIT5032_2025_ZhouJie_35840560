@@ -116,8 +116,7 @@ import { sanitizeText } from '@/utils/sanitize'
 const toast = useToast()
 
 // === Cloudflare Worker Email API ===
-const API_EMAIL = 'https://mindhaven-api.jzho0194.workers.dev/api/email' // ← 改成你的 Worker 地址
-// Resend 测试模式：只能发给账户邮箱
+const API_EMAIL = 'https://mindhaven-api.jzho0194.workers.dev/api/email'
 const ALLOWED_TEST_EMAIL = 'jzho0194@student.monash.edu'
 
 // 表单
@@ -225,7 +224,7 @@ const stats = computed(()=>{
   return {avg,min:Math.min(...arr),max:Math.max(...arr)}
 })
 
-// 导出本地 PDF（下载）
+// 导出 PDF（下载）
 function onExportPdf(){
   exportMoodSummaryPdf({
     title:'Mood Summary',
@@ -237,11 +236,11 @@ function onExportPdf(){
   }, `mood_summary_${new Date().toISOString().slice(0,10)}.pdf`)
 }
 
-// 极简 PDF：返回 base64（无 data: 前缀），体积很小
+// 极简 PDF（base64）
 function smallPdfBase64(){
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   doc.setFontSize(18); doc.text('Mood Summary', 40, 60)
-  doc.setFontSize(12);
+  doc.setFontSize(12)
   doc.text(`Period: ${rangeLabel.value}`, 40, 90)
   doc.text(`Average: ${stats.value.avg ?? '-'}`, 40, 110)
   doc.text(`Min: ${stats.value.min ?? '-'}`, 40, 130)
@@ -251,22 +250,10 @@ function smallPdfBase64(){
   return doc.output('datauristring').split(',')[1]
 }
 
-// 发送 Email（走 Worker；兼容 Resend test mode）
+// 发送 Email（走 Worker，不提示 test mode）
 async function onSendEmail(){
   try {
-    // 测试模式：只允许发送到账户邮箱
-    const rawTo = store.currentUser.value?.email || ALLOWED_TEST_EMAIL
-    const to = rawTo === ALLOWED_TEST_EMAIL ? ALLOWED_TEST_EMAIL : ALLOWED_TEST_EMAIL
-    if (rawTo !== ALLOWED_TEST_EMAIL) {
-      toast.add({
-        severity:'warn',
-        summary:'Resend test mode',
-        detail:`In test mode, emails can only be sent to ${ALLOWED_TEST_EMAIL}. Using that address.`,
-        life:3500
-      })
-    }
-
-    // 小体积 PDF（如不需要附件，可把 attachments 设为空数组）
+    const to = ALLOWED_TEST_EMAIL // Resend test mode，只能发给自己
     const base64 = smallPdfBase64()
 
     const res = await fetch(API_EMAIL, {
@@ -277,7 +264,6 @@ async function onSendEmail(){
         subject: 'Your Mood Summary',
         html: '<p>Please find attached your mood summary.</p>',
         attachments: [{ filename: 'mood_summary.pdf', content: base64 }]
-        // attachments: []  // <-- 不带附件时用这个
       })
     })
 
@@ -285,20 +271,9 @@ async function onSendEmail(){
     data = ct.includes('application/json') ? await res.json().catch(()=>null) : { ok:false }
 
     if (res.ok && data?.ok) {
-      toast.add({ severity:'success', summary:'Email sent', life:2000 })
+      toast.add({ severity:'success', summary:'Email sent', life:2200 })
     } else {
-      // 友好化 test-mode 提示
-      if (data?.raw?.includes('only send testing emails')) {
-        toast.add({
-          severity:'warn',
-          summary:'Email not sent (test mode)',
-          detail:`Resend sandbox can only deliver to ${ALLOWED_TEST_EMAIL}.`,
-          life:5000
-        })
-      } else {
-        console.error('email error:', data)
-        throw new Error(`${data?.error || `HTTP ${res.status} ${res.statusText}`}${data?.raw ? ' - ' + data.raw : ''}`)
-      }
+      throw new Error(data?.error || `HTTP ${res.status} ${res.statusText}`)
     }
   } catch (err) {
     toast.add({ severity:'error', summary:'Email failed', detail:String(err?.message||err), life:4000 })
