@@ -74,6 +74,7 @@
         </DataTable>
       </template>
     </Card>
+
     <Card class="card-panel">
       <template #title>Mood Trend</template>
       <template #content>
@@ -81,6 +82,7 @@
         <Chart type="line" :data="chartData" :options="chartOptions" style="width:100%;" />
       </template>
     </Card>
+
     <div class="summary">
       <div class="sum-card"><div class="sum-title">Period</div><div class="sum-val">{{ rangeLabel }}</div></div>
       <div class="sum-card"><div class="sum-title">Average</div><div class="sum-val">{{ stats.avg ?? '-' }}</div></div>
@@ -106,13 +108,22 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Chart from 'primevue/chart'
+import jsPDF from 'jspdf'
 import { exportMoodSummaryPdf } from '@/utils/exportPdf'
 import { runValidators, required, intRange, maxLen } from '@/utils/validators'
 import { sanitizeText } from '@/utils/sanitize'
 
 const toast = useToast()
+
+// === Cloudflare Worker Email API ===
+const API_EMAIL = 'https://mindhaven-api.jzho0194.workers.dev/api/email' // ← 改成你的 Worker 地址
+// Resend 测试模式：只能发给账户邮箱
+const ALLOWED_TEST_EMAIL = 'jzho0194@student.monash.edu'
+
+// 表单
 const entry = reactive({ date: new Date(), mood: 7, notes: '', triggersRaw: '' })
 function resetEntry(){ entry.date = new Date(); entry.mood = 7; entry.notes=''; entry.triggersRaw='' }
+
 function saveEntry(){
   if (!store.isLoggedIn.value){
     toast.add({severity:'info', summary:'Sign in required', detail:'Guest mode is read-only.', life:2200})
@@ -122,6 +133,7 @@ function saveEntry(){
   const errNotes = runValidators(entry.notes, [maxLen(500)])
   if (errMood !== true)  return toast.add({ severity:'warn', summary:'Mood',  detail:errMood,  life:2200 })
   if (errNotes !== true) return toast.add({ severity:'warn', summary:'Notes', detail:errNotes, life:2200 })
+
   const cleanNotes = sanitizeText(entry.notes)
   const cleanTriggers = (entry.triggersRaw || '').split(',').map(s=>sanitizeText(s)).filter(Boolean)
 
@@ -139,6 +151,7 @@ function saveEntry(){
   resetEntry()
 }
 
+// 连续低分提醒
 const lowStreak = computed(() => {
   const list = (store.moodEntries.value||[]).slice().sort((a,b)=>b.date-a.date)
   let s=0
@@ -150,6 +163,7 @@ const lowStreak = computed(() => {
   return s
 })
 
+// 数据表过滤
 const globalFilter = ref('')
 const filters = ref({
   global:{value:null, matchMode:'contains'},
@@ -165,6 +179,7 @@ const rangeOptions = [
 ]
 const rangeDays = ref(30)
 const rangeLabel = computed(()=> rangeOptions.find(o=>o.value===rangeDays.value)?.label || 'Custom')
+
 const filteredEntries = computed(()=>{
   const uid = store.currentUser.value?.uid
   const cutoff = Date.now() - rangeDays.value*86400000
@@ -196,18 +211,10 @@ const chartOptions = computed(() => ({
   maintainAspectRatio: false,
   aspectRatio: 2,
   scales: {
-    y: {
-      min: 1, max: 10, ticks: { stepSize: 1 },
-      grid: { color: 'rgba(0,0,0,.08)' }
-    },
-    x: {
-      grid: { display: false }
-    }
+    y: { min: 1, max: 10, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,.08)' } },
+    x: { grid: { display: false } }
   },
-  plugins: {
-    legend: { display: false },
-    tooltip: { intersect: false, mode: 'index' }
-  }
+  plugins: { legend: { display: false }, tooltip: { intersect: false, mode: 'index' } }
 }))
 
 function moodColor(m){ if (m>=8) return 'success'; if (m<=3) return 'danger'; if (m<=5) return 'warn'; return 'info' }
@@ -217,6 +224,8 @@ const stats = computed(()=>{
   const avg=Math.round((arr.reduce((a,b)=>a+b,0)/arr.length)*10)/10
   return {avg,min:Math.min(...arr),max:Math.max(...arr)}
 })
+
+// 导出本地 PDF（下载）
 function onExportPdf(){
   exportMoodSummaryPdf({
     title:'Mood Summary',
@@ -227,63 +236,73 @@ function onExportPdf(){
     notes:'This summary is for self-reflection only and is not medical advice.'
   }, `mood_summary_${new Date().toISOString().slice(0,10)}.pdf`)
 }
+
+// 极简 PDF：返回 base64（无 data: 前缀），体积很小
+function smallPdfBase64(){
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  doc.setFontSize(18); doc.text('Mood Summary', 40, 60)
+  doc.setFontSize(12);
+  doc.text(`Period: ${rangeLabel.value}`, 40, 90)
+  doc.text(`Average: ${stats.value.avg ?? '-'}`, 40, 110)
+  doc.text(`Min: ${stats.value.min ?? '-'}`, 40, 130)
+  doc.text(`Max: ${stats.value.max ?? '-'}`, 40, 150)
+  doc.setFontSize(10)
+  doc.text('Note: This summary is for self-reflection only and is not medical advice.', 40, 180, { maxWidth: 500 })
+  return doc.output('datauristring').split(',')[1]
+}
+
+// 发送 Email（走 Worker；兼容 Resend test mode）
 async function onSendEmail(){
   try {
-    // 1) 生成 PDF Blob（不直接下载）
-    const pdfBlob = exportMoodSummaryPdf({
-      title:'Mood Summary',
-      period: rangeLabel.value,
-      avg: stats.value.avg,
-      min: stats.value.min,
-      max: stats.value.max,
-      notes:'This summary is for self-reflection only and is not medical advice.'
-    }, null, { returnBlob: true })
+    // 测试模式：只允许发送到账户邮箱
+    const rawTo = store.currentUser.value?.email || ALLOWED_TEST_EMAIL
+    const to = rawTo === ALLOWED_TEST_EMAIL ? ALLOWED_TEST_EMAIL : ALLOWED_TEST_EMAIL
+    if (rawTo !== ALLOWED_TEST_EMAIL) {
+      toast.add({
+        severity:'warn',
+        summary:'Resend test mode',
+        detail:`In test mode, emails can only be sent to ${ALLOWED_TEST_EMAIL}. Using that address.`,
+        life:3500
+      })
+    }
 
-    // 2) Blob → Base64
-    const base64 = await blobToBase64(pdfBlob)
+    // 小体积 PDF（如不需要附件，可把 attachments 设为空数组）
+    const base64 = smallPdfBase64()
 
-    // 3) 调用 Serverless Function 发送邮件
-    const toEmail = store.currentUser.value?.email || 'test@example.com'
-   
-    const res = await fetch('/api/email', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    to: store.currentUser.value?.email || 'test@example.com',
-    subject: 'Your Mood Summary',
-    html: '<p>Please find attached your mood summary.</p>',
-    attachments: [{ filename: 'mood_summary.pdf', content: base64 }]
-  })
-})
+    const res = await fetch(API_EMAIL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to,
+        subject: 'Your Mood Summary',
+        html: '<p>Please find attached your mood summary.</p>',
+        attachments: [{ filename: 'mood_summary.pdf', content: base64 }]
+        // attachments: []  // <-- 不带附件时用这个
+      })
+    })
 
-let data;
-const ct = res.headers.get('content-type') || ''
-if (ct.includes('application/json')) {
-  try { data = await res.json() } catch { data = null }
-} else {
-  const text = await res.text()
-  data = { ok: false, error: `HTTP ${res.status} ${res.statusText}: ${text.slice(0,200)}` }
-}
+    let data; const ct = res.headers.get('content-type')||''
+    data = ct.includes('application/json') ? await res.json().catch(()=>null) : { ok:false }
 
-if (res.ok && data?.ok) {
-  toast.add({ severity:'success', summary:'Email sent', life:2000 })
-} else {
-  throw new Error(data?.error || `HTTP ${res.status} ${res.statusText}`)
-}
-
+    if (res.ok && data?.ok) {
+      toast.add({ severity:'success', summary:'Email sent', life:2000 })
+    } else {
+      // 友好化 test-mode 提示
+      if (data?.raw?.includes('only send testing emails')) {
+        toast.add({
+          severity:'warn',
+          summary:'Email not sent (test mode)',
+          detail:`Resend sandbox can only deliver to ${ALLOWED_TEST_EMAIL}.`,
+          life:5000
+        })
+      } else {
+        console.error('email error:', data)
+        throw new Error(`${data?.error || `HTTP ${res.status} ${res.statusText}`}${data?.raw ? ' - ' + data.raw : ''}`)
+      }
+    }
   } catch (err) {
-    toast.add({ severity:'error', summary:'Email failed', detail:String(err?.message || err), life:3000 })
+    toast.add({ severity:'error', summary:'Email failed', detail:String(err?.message||err), life:4000 })
   }
-}
-
-// 工具：Blob -> base64 字符串（去掉 data: 前缀）
-function blobToBase64(blob){
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => resolve(String(reader.result).split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
 }
 </script>
 
