@@ -274,7 +274,7 @@ function removeAlert(id) {
   if (i > -1) alerts.value.splice(i, 1)
 }
 
-const allowedPages = new Set(['home', 'forum', 'mood-tracker', 'resources'])
+const allowedPages = new Set(['home', 'forum', 'mood-tracker', 'resources','explore'])
 function navigate(page) {
   currentPage.value = allowedPages.has(page) ? page : 'home'
 }

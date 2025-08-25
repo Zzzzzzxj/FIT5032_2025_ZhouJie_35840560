@@ -8,6 +8,7 @@
         <li><button :class="tab('forum')" @click="go('forum')">Community</button></li>
         <li><button :class="tab('mood-tracker')" @click="go('mood-tracker')">Mood Tracker</button></li>
         <li><button :class="tab('resources')" @click="go('resources')">Resources</button></li>
+        <li><button :class="tab('explore')" @click="go('explore')">Explore</button></li>
       </ul>
 
       <div class="nav__actions">

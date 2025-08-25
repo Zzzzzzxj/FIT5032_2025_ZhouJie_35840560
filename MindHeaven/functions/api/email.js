@@ -7,24 +7,30 @@ export const onRequestPost = async (ctx) => {
   try {
     const { RESEND_API_KEY, FROM_EMAIL } = ctx.env || {}
     if (!RESEND_API_KEY || !FROM_EMAIL) {
-      return new Response(JSON.stringify({ ok: false, error: 'Missing RESEND_API_KEY or FROM_EMAIL' }), { status: 500 })
+      return new Response(JSON.stringify({ ok: false, error: 'Missing RESEND_API_KEY or FROM_EMAIL' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
 
     const { to, subject, html, attachments } = await ctx.request.json()
 
     if (!to || !subject || !html) {
-      return new Response(JSON.stringify({ ok: false, error: 'Missing to/subject/html' }), { status: 400 })
+      return new Response(JSON.stringify({ ok: false, error: 'Missing to/subject/html' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
 
     const resend = new Resend(RESEND_API_KEY)
     const result = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: FROM_EMAIL,                          // 例如：'MindHaven <noreply@your-domain.com>'
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
       attachments: (attachments || []).map(a => ({
         filename: a.filename,
-        content: a.content // base64
+        content: a.content                       // base64 字符串
       }))
     })
 
@@ -32,6 +38,9 @@ export const onRequestPost = async (ctx) => {
       headers: { 'Content-Type': 'application/json' }
     })
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e?.message || 'Unknown error' }), { status: 500 })
+    return new Response(JSON.stringify({ ok: false, error: e?.message || 'Unknown error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 }

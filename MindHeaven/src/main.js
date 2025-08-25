@@ -20,18 +20,30 @@ import ToastService from 'primevue/toastservice'
 import 'primeicons/primeicons.css'
 import './assets/main.css'
 
+// Leaflet 样式 & 图标修复
+import 'leaflet/dist/leaflet.css'        
+import L from 'leaflet'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow
+})
+
+// ---------------- 初始化 Vue App ----------------
 const app = createApp(App)
 
 app.use(PrimeVue, {
   theme: {
     preset: Aura,
-    options: {
-    }
+    options: {}
   }
 })
-
 app.use(ToastService)
 
+// 注册全局组件
 app.component('Button', Button)
 app.component('DataTable', DataTable)
 app.component('Column', Column)

@@ -15,6 +15,8 @@
     <ForumView v-else-if="store.currentPage.value === 'forum'" />
     <MoodTrackerView v-else-if="store.currentPage.value === 'mood-tracker'" />
     <ResourcesView v-else-if="store.currentPage.value === 'resources'" />
+    <ExploreView v-else-if="store.currentPage.value === 'explore'" />
+    <ExploreView v-else-if="store.currentPage.value === 'explore'" />
     <HomeView v-else />
   </main>
 
@@ -32,7 +34,7 @@ import HomeView from './views/HomeView.vue'
 import ForumView from './views/ForumView.vue'
 import MoodTrackerView from './views/MoodTrackerView.vue'
 import ResourcesView from './views/ResourcesView.vue'
-
+import ExploreView from './views/ExploreView.vue'
 const showLogin = ref(false)
 
 onMounted(() => {

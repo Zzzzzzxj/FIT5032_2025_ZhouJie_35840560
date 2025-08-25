@@ -1,33 +1,43 @@
-import jsPDF from 'jspdf'
+// src/utils/exportPdf.js
+// 依赖：npm i jspdf
+import { jsPDF } from 'jspdf'
 
-export function exportMoodSummaryPdf(summary, filename = 'mood_summary.pdf') {
-  // summary: { title, period, avg, min, max, notes? }
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
-  const x = 48
-  let y = 64
+/**
+ * 导出心情总结 PDF
+ * @param {Object} data { title, period, avg, min, max, notes }
+ * @param {string|null} filename 下载文件名；如果配合 returnBlob 使用，可以传 null
+ * @param {Object} opts { returnBlob?: boolean }
+ * @returns {Blob|undefined} 当 returnBlob=true 时返回 Blob，否则直接触发下载
+ */
+export function exportMoodSummaryPdf(data, filename = 'mood_summary.pdf', opts = {}) {
+  const doc = new jsPDF()
+
+  const title = data?.title || 'Mood Summary'
+  const period = data?.period || '-'
+  const avg = data?.avg ?? '-'
+  const min = data?.min ?? '-'
+  const max = data?.max ?? '-'
+  const notes = data?.notes || 'This summary is for self-reflection only and is not medical advice.'
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(18)
-  doc.text(summary?.title || 'Mood Summary', x, y)
+  doc.text(title, 20, 22)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(12)
-  y += 28
-  doc.text(`Period: ${summary?.period || '-'}`, x, y)
-  y += 18
-  doc.text(`Average: ${summary?.avg ?? '-'}`, x, y)
-  y += 18
-  doc.text(`Min: ${summary?.min ?? '-'}`, x, y)
-  y += 18
-  doc.text(`Max: ${summary?.max ?? '-'}`, x, y)
+  doc.text(`Period: ${period}`, 20, 34)
+  doc.text(`Average: ${avg}`, 20, 46)
+  doc.text(`Min: ${min}`, 20, 58)
+  doc.text(`Max: ${max}`, 20, 70)
 
-  if (summary?.notes) {
-    y += 24
-    doc.text('Notes:', x, y)
-    const lines = doc.splitTextToSize(summary.notes, 520)
-    y += 16
-    doc.text(lines, x, y)
+  doc.setFontSize(11)
+  doc.text('Notes:', 20, 88)
+  // 自动换行
+  const lines = doc.splitTextToSize(notes, 170)
+  doc.text(lines, 20, 98)
+
+  if (opts?.returnBlob) {
+    return doc.output('blob')
   }
-
-  doc.save(filename)
+  doc.save(filename || 'mood_summary.pdf')
 }

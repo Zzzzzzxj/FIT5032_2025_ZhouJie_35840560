@@ -5,6 +5,7 @@
       <p class="page-desc">Track your daily mood, jot notes and triggers.</p>
       <div class="head__actions" style="margin-top:10px; display:flex; gap:8px; justify-content:center;">
         <Button icon="pi pi-file-pdf" label="Export PDF" @click="onExportPdf" />
+        <Button icon="pi pi-envelope" label="Send via Email" @click="onSendEmail" />
       </div>
     </div>
 
@@ -225,6 +226,64 @@ function onExportPdf(){
     max:stats.value.max,
     notes:'This summary is for self-reflection only and is not medical advice.'
   }, `mood_summary_${new Date().toISOString().slice(0,10)}.pdf`)
+}
+async function onSendEmail(){
+  try {
+    // 1) 生成 PDF Blob（不直接下载）
+    const pdfBlob = exportMoodSummaryPdf({
+      title:'Mood Summary',
+      period: rangeLabel.value,
+      avg: stats.value.avg,
+      min: stats.value.min,
+      max: stats.value.max,
+      notes:'This summary is for self-reflection only and is not medical advice.'
+    }, null, { returnBlob: true })
+
+    // 2) Blob → Base64
+    const base64 = await blobToBase64(pdfBlob)
+
+    // 3) 调用 Serverless Function 发送邮件
+    const toEmail = store.currentUser.value?.email || 'test@example.com'
+   
+    const res = await fetch('/api/email', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    to: store.currentUser.value?.email || 'test@example.com',
+    subject: 'Your Mood Summary',
+    html: '<p>Please find attached your mood summary.</p>',
+    attachments: [{ filename: 'mood_summary.pdf', content: base64 }]
+  })
+})
+
+let data;
+const ct = res.headers.get('content-type') || ''
+if (ct.includes('application/json')) {
+  try { data = await res.json() } catch { data = null }
+} else {
+  const text = await res.text()
+  data = { ok: false, error: `HTTP ${res.status} ${res.statusText}: ${text.slice(0,200)}` }
+}
+
+if (res.ok && data?.ok) {
+  toast.add({ severity:'success', summary:'Email sent', life:2000 })
+} else {
+  throw new Error(data?.error || `HTTP ${res.status} ${res.statusText}`)
+}
+
+  } catch (err) {
+    toast.add({ severity:'error', summary:'Email failed', detail:String(err?.message || err), life:3000 })
+  }
+}
+
+// 工具：Blob -> base64 字符串（去掉 data: 前缀）
+function blobToBase64(blob){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(String(reader.result).split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
 }
 </script>
 
