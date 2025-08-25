@@ -115,7 +115,6 @@ import { sanitizeText } from '@/utils/sanitize'
 
 const toast = useToast()
 
-// === Cloudflare Worker Email API ===
 const API_EMAIL = 'https://mindhaven-api.jzho0194.workers.dev/api/email'
 const ALLOWED_TEST_EMAIL = 'jzho0194@student.monash.edu'
 
@@ -150,7 +149,6 @@ function saveEntry(){
   resetEntry()
 }
 
-// 连续低分提醒
 const lowStreak = computed(() => {
   const list = (store.moodEntries.value||[]).slice().sort((a,b)=>b.date-a.date)
   let s=0
@@ -224,7 +222,6 @@ const stats = computed(()=>{
   return {avg,min:Math.min(...arr),max:Math.max(...arr)}
 })
 
-// 导出 PDF（下载）
 function onExportPdf(){
   exportMoodSummaryPdf({
     title:'Mood Summary',
@@ -236,7 +233,6 @@ function onExportPdf(){
   }, `mood_summary_${new Date().toISOString().slice(0,10)}.pdf`)
 }
 
-// 极简 PDF（base64）
 function smallPdfBase64(){
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   doc.setFontSize(18); doc.text('Mood Summary', 40, 60)
@@ -250,10 +246,9 @@ function smallPdfBase64(){
   return doc.output('datauristring').split(',')[1]
 }
 
-// 发送 Email（走 Worker，不提示 test mode）
 async function onSendEmail(){
   try {
-    const to = ALLOWED_TEST_EMAIL // Resend test mode，只能发给自己
+    const to = ALLOWED_TEST_EMAIL 
     const base64 = smallPdfBase64()
 
     const res = await fetch(API_EMAIL, {
